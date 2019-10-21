@@ -1358,6 +1358,24 @@ static struct net_device *get_dev_from_nl(struct net *net,
 	return dev;
 }
 
+static struct macsec_secy *get_secy_from_nl(struct net *net,
+					     struct nlattr **attrs,
+					     struct net_device **devp)
+{
+	struct net_device *dev;
+	struct macsec_secy *secy;
+
+	dev = get_dev_from_nl(net, attrs);
+	if (IS_ERR(dev))
+		return ERR_CAST(dev);
+
+	secy = &macsec_priv(dev)->secy;
+
+	*devp = dev;
+
+	return secy;
+}
+
 static sci_t nla_get_sci(const struct nlattr *nla)
 {
 	return (__force sci_t)nla_get_u64(nla);
@@ -1387,14 +1405,13 @@ static struct macsec_tx_sa *get_txsa_from_nl(struct net *net,
 
 	*assoc_num = nla_get_u8(tb_sa[MACSEC_SA_ATTR_AN]);
 
-	dev = get_dev_from_nl(net, attrs);
-	if (IS_ERR(dev))
-		return ERR_CAST(dev);
+	secy = get_secy_from_nl(net, attrs, &dev);
+	if (IS_ERR(secy))
+		return ERR_CAST(secy);
 
 	if (*assoc_num >= MACSEC_NUM_AN)
 		return ERR_PTR(-EINVAL);
 
-	secy = &macsec_priv(dev)->secy;
 	tx_sc = &secy->tx_sc;
 
 	tx_sa = rtnl_dereference(tx_sc->sa[*assoc_num]);
@@ -1418,11 +1435,9 @@ static struct macsec_rx_sc *get_rxsc_from_nl(struct net *net,
 	struct macsec_rx_sc *rx_sc;
 	sci_t sci;
 
-	dev = get_dev_from_nl(net, attrs);
-	if (IS_ERR(dev))
-		return ERR_CAST(dev);
-
-	secy = &macsec_priv(dev)->secy;
+	secy = get_secy_from_nl(net, attrs, &dev);
+	if (IS_ERR(secy))
+		return ERR_CAST(secy);
 
 	if (!tb_rxsc[MACSEC_RXSC_ATTR_SCI])
 		return ERR_PTR(-EINVAL);
@@ -1696,6 +1711,7 @@ static int macsec_add_rxsc(struct sk_buff *skb, struct genl_info *info)
 	struct net_device *dev;
 	sci_t sci = MACSEC_UNDEF_SCI;
 	struct nlattr **attrs = info->attrs;
+	struct macsec_secy *secy;
 	struct macsec_rx_sc *rx_sc;
 	struct nlattr *tb_rxsc[MACSEC_RXSC_ATTR_MAX + 1];
 	const struct macsec_ops *ops;
@@ -1713,10 +1729,10 @@ static int macsec_add_rxsc(struct sk_buff *skb, struct genl_info *info)
 		return -EINVAL;
 
 	rtnl_lock();
-	dev = get_dev_from_nl(genl_info_net(info), attrs);
-	if (IS_ERR(dev)) {
+	secy = get_secy_from_nl(genl_info_net(info), attrs, &dev);
+	if (IS_ERR(secy)) {
 		rtnl_unlock();
-		return PTR_ERR(dev);
+		return PTR_ERR(secy);
 	}
 
 	sci = nla_get_sci(tb_rxsc[MACSEC_RXSC_ATTR_SCI]);
@@ -1734,6 +1750,7 @@ static int macsec_add_rxsc(struct sk_buff *skb, struct genl_info *info)
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
 	if (ops) {
 		ctx.rx_sc = rx_sc;
+		ctx.secy = secy;
 
 		ret = macsec_offload(ops->mdo_add_rxsc, &ctx);
 		if (ret) {
@@ -2253,6 +2270,7 @@ static int macsec_upd_rxsc(struct sk_buff *skb, struct genl_info *info)
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
 	if (ops) {
 		ctx.rx_sc = rx_sc;
+		ctx.secy = secy;
 
 		ret = macsec_offload(ops->mdo_upd_rxsc, &ctx);
 		if (ret) {
