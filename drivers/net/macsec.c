@@ -1358,24 +1358,6 @@ static struct net_device *get_dev_from_nl(struct net *net,
 	return dev;
 }
 
-static struct macsec_secy *get_secy_from_nl(struct net *net,
-					     struct nlattr **attrs,
-					     struct net_device **devp)
-{
-	struct net_device *dev;
-	struct macsec_secy *secy;
-
-	dev = get_dev_from_nl(net, attrs);
-	if (IS_ERR(dev))
-		return ERR_CAST(dev);
-
-	secy = &macsec_priv(dev)->secy;
-
-	*devp = dev;
-
-	return secy;
-}
-
 static sci_t nla_get_sci(const struct nlattr *nla)
 {
 	return (__force sci_t)nla_get_u64(nla);
@@ -1405,13 +1387,14 @@ static struct macsec_tx_sa *get_txsa_from_nl(struct net *net,
 
 	*assoc_num = nla_get_u8(tb_sa[MACSEC_SA_ATTR_AN]);
 
-	secy = get_secy_from_nl(net, attrs, &dev);
-	if (IS_ERR(secy))
-		return ERR_CAST(secy);
+	dev = get_dev_from_nl(net, attrs);
+	if (IS_ERR(dev))
+		return ERR_CAST(dev);
 
 	if (*assoc_num >= MACSEC_NUM_AN)
 		return ERR_PTR(-EINVAL);
 
+	secy = &macsec_priv(dev)->secy;
 	tx_sc = &secy->tx_sc;
 
 	tx_sa = rtnl_dereference(tx_sc->sa[*assoc_num]);
@@ -1435,9 +1418,11 @@ static struct macsec_rx_sc *get_rxsc_from_nl(struct net *net,
 	struct macsec_rx_sc *rx_sc;
 	sci_t sci;
 
-	secy = get_secy_from_nl(net, attrs, &dev);
-	if (IS_ERR(secy))
-		return ERR_CAST(secy);
+	dev = get_dev_from_nl(net, attrs);
+	if (IS_ERR(dev))
+		return ERR_CAST(dev);
+
+	secy = &macsec_priv(dev)->secy;
 
 	if (!tb_rxsc[MACSEC_RXSC_ATTR_SCI])
 		return ERR_PTR(-EINVAL);
@@ -1729,12 +1714,13 @@ static int macsec_add_rxsc(struct sk_buff *skb, struct genl_info *info)
 		return -EINVAL;
 
 	rtnl_lock();
-	secy = get_secy_from_nl(genl_info_net(info), attrs, &dev);
-	if (IS_ERR(secy)) {
+	dev = get_dev_from_nl(genl_info_net(info), attrs);
+	if (IS_ERR(dev)) {
 		rtnl_unlock();
-		return PTR_ERR(secy);
+		return PTR_ERR(dev);
 	}
 
+	secy = &macsec_priv(dev)->secy;
 	sci = nla_get_sci(tb_rxsc[MACSEC_RXSC_ATTR_SCI]);
 
 	rx_sc = create_rx_sc(dev, sci);
