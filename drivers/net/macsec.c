@@ -2289,7 +2289,7 @@ static void get_tx_sa_stats(struct net_device *dev, int an,
 {
 	const struct macsec_ops *ops;
 	struct macsec_context ctx;
-	int err = -1;
+	int err = -EOPNOTSUPP;
 	int cpu;
 
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
@@ -2301,7 +2301,7 @@ static void get_tx_sa_stats(struct net_device *dev, int an,
 		err = macsec_offload(ops->mdo_get_tx_sa_stats, &ctx);
 	}
 
-	if (err) {
+	if (err == -EOPNOTSUPP) {
 		for_each_possible_cpu(cpu) {
 			const struct macsec_tx_sa_stats *stats =
 				per_cpu_ptr(tx_sa->stats, cpu);
@@ -2329,7 +2329,7 @@ static void get_rx_sa_stats(struct net_device *dev,
 {
 	const struct macsec_ops *ops;
 	struct macsec_context ctx;
-	int err = -1;
+	int err = -EOPNOTSUPP;
 	int cpu;
 
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
@@ -2342,7 +2342,7 @@ static void get_rx_sa_stats(struct net_device *dev,
 		err = macsec_offload(ops->mdo_get_rx_sa_stats, &ctx);
 	}
 
-	if (err) {
+	if (err == -EOPNOTSUPP) {
 		for_each_possible_cpu(cpu) {
 			const struct macsec_rx_sa_stats *stats =
 				per_cpu_ptr(rx_sa->stats, cpu);
@@ -2375,7 +2375,7 @@ static void get_rx_sc_stats(struct net_device *dev,
 {
 	const struct macsec_ops *ops;
 	struct macsec_context ctx;
-	int err = -1;
+	int err = -EOPNOTSUPP;
 	int cpu;
 
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
@@ -2386,7 +2386,7 @@ static void get_rx_sc_stats(struct net_device *dev,
 		err = macsec_offload(ops->mdo_get_rx_sc_stats, &ctx);
 	}
 
-	if (err) {
+	if (err == -EOPNOTSUPP) {
 		for_each_possible_cpu(cpu) {
 			const struct pcpu_rx_sc_stats *stats;
 			struct macsec_rx_sc_stats tmp;
@@ -2453,7 +2453,7 @@ static void get_tx_sc_stats(struct net_device *dev, struct macsec_tx_sc_stats *s
 {
 	const struct macsec_ops *ops;
 	struct macsec_context ctx;
-	int err = -1;
+	int err = -EOPNOTSUPP;
 	int cpu;
 
 	/* If h/w offloading is available, propagate to the device */
@@ -2464,7 +2464,7 @@ static void get_tx_sc_stats(struct net_device *dev, struct macsec_tx_sc_stats *s
 		err = macsec_offload(ops->mdo_get_tx_sc_stats, &ctx);
 	}
 
-	if (err) {
+	if (err == -EOPNOTSUPP) {
 		for_each_possible_cpu(cpu) {
 			const struct pcpu_tx_sc_stats *stats;
 			struct macsec_tx_sc_stats tmp;
@@ -2507,7 +2507,7 @@ static void get_secy_stats(struct net_device *dev, struct macsec_dev_stats *sum)
 {
 	const struct macsec_ops *ops;
 	struct macsec_context ctx;
-	int err = -1;
+	int err = -EOPNOTSUPP;
 	int cpu;
 
 	ops = macsec_get_ops(netdev_priv(dev), &ctx);
@@ -2517,7 +2517,7 @@ static void get_secy_stats(struct net_device *dev, struct macsec_dev_stats *sum)
 		err = macsec_offload(ops->mdo_get_dev_stats, &ctx);
 	}
 
-	if (err) {
+	if (err == -EOPNOTSUPP) {
 		for_each_possible_cpu(cpu) {
 			const struct pcpu_secy_stats *stats;
 			struct macsec_dev_stats tmp;
