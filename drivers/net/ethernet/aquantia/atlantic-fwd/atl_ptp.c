@@ -846,7 +846,7 @@ irqreturn_t atl_ptp_irq(int irq, void *private)
 err_exit:
 	return err >= 0 ? IRQ_HANDLED : IRQ_NONE;
 #else
-	return 0;
+	return IRQ_NONE;
 #endif
 }
 
