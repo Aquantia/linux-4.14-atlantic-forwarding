@@ -613,21 +613,6 @@ static int atl_ptp_poll(struct napi_struct *napi, int budget)
 	return work_done;
 }
 
-irqreturn_t atl_ptp_irq(int irq, void *private)
-{
-	struct atl_ptp *ptp = private;
-	int err = 0;
-
-	if (!ptp) {
-		err = -EINVAL;
-		goto err_exit;
-	}
-	napi_schedule_irqoff(ptp->napi);
-
-err_exit:
-	return err >= 0 ? IRQ_HANDLED : IRQ_NONE;
-}
-
 static struct ptp_clock_info atl_ptp_clock = {
 	.owner		= THIS_MODULE,
 	.name		= "atlantic ptp",
@@ -845,6 +830,25 @@ static void atl_ptp_poll_sync_work_cb(struct work_struct *w)
 }
 
 #endif /* IS_REACHABLE(CONFIG_PTP_1588_CLOCK) */
+
+irqreturn_t atl_ptp_irq(int irq, void *private)
+{
+#if IS_REACHABLE(CONFIG_PTP_1588_CLOCK)
+	struct atl_ptp *ptp = private;
+	int err = 0;
+
+	if (!ptp) {
+		err = -EINVAL;
+		goto err_exit;
+	}
+	napi_schedule_irqoff(ptp->napi);
+
+err_exit:
+	return err >= 0 ? IRQ_HANDLED : IRQ_NONE;
+#else
+	return IRQ_NONE;
+#endif
+}
 
 void atl_ptp_tm_offset_set(struct atl_nic *nic, unsigned int mbps)
 {
