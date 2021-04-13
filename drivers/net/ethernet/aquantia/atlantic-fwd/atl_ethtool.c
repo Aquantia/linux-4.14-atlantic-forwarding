@@ -2711,9 +2711,7 @@ static void atl_refresh_rxf_desc(struct atl_nic *nic,
 	atl_for_each_rxf_idx(desc, idx)
 		desc->update_rxf(nic, idx);
 
-	atl_set_vlan_promisc(&nic->hw, (nic->ndev->flags & IFF_PROMISC) ||
-				       nic->rxf_vlan.promisc_count ||
-				       !nic->rxf_vlan.vlans_active);
+	atl_set_vlan_promisc(&nic->hw, atl_vlan_promisc_status(nic->ndev));
 }
 
 void atl_refresh_rxfs(struct atl_nic *nic)
@@ -2723,9 +2721,7 @@ void atl_refresh_rxfs(struct atl_nic *nic)
 	atl_for_each_rxf_desc(desc)
 		atl_refresh_rxf_desc(nic, desc);
 
-	atl_set_vlan_promisc(&nic->hw, (nic->ndev->flags & IFF_PROMISC) ||
-				       nic->rxf_vlan.promisc_count ||
-				       !nic->rxf_vlan.vlans_active);
+	atl_set_vlan_promisc(&nic->hw, atl_vlan_promisc_status(nic->ndev));
 }
 
 static bool atl_vlan_pull_from_promisc(struct atl_nic *nic, uint32_t idx)
@@ -2765,9 +2761,8 @@ static bool atl_vlan_pull_from_promisc(struct atl_nic *nic, uint32_t idx)
 	} while (idx & ATL_VIDX_FREE);
 
 	kfree(map);
-	atl_set_vlan_promisc(&nic->hw, (nic->ndev->flags & IFF_PROMISC) ||
-				       vlan->promisc_count ||
-				       !vlan->vlans_active);
+	atl_set_vlan_promisc(&nic->hw, atl_vlan_promisc_status(nic->ndev));
+
 	return true;
 }
 
@@ -2955,9 +2950,7 @@ int atl_vlan_rx_add_vid(struct net_device *ndev, __be16 proto, u16 vid)
 		vlan->promisc_count++;
 		if (pm_runtime_active(&nic->hw.pdev->dev))
 			atl_set_vlan_promisc(&nic->hw,
-					     (ndev->flags & IFF_PROMISC) ||
-					     vlan->promisc_count ||
-					     !vlan->vlans_active);
+					atl_vlan_promisc_status(nic->ndev));
 		return 0;
 	}
 
@@ -2984,9 +2977,8 @@ update_vlan:
 	atl_rxf_update_vlan(nic, idx);
 	if (pm_runtime_active(&nic->hw.pdev->dev))
 		atl_set_vlan_promisc(&nic->hw,
-				     (nic->ndev->flags & IFF_PROMISC) ||
-				     vlan->promisc_count ||
-				     !vlan->vlans_active);
+				atl_vlan_promisc_status(nic->ndev));
+
 	return 0;
 }
 
@@ -3027,9 +3019,9 @@ int atl_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vid)
 
 update_vlan_promisc:
 	if (pm_runtime_active(&nic->hw.pdev->dev))
-		atl_set_vlan_promisc(&nic->hw, (ndev->flags & IFF_PROMISC) ||
-				     vlan->promisc_count ||
-				     !vlan->vlans_active);
+		atl_set_vlan_promisc(&nic->hw,
+				atl_vlan_promisc_status(nic->ndev));
+
 	return 0;
 }
 
