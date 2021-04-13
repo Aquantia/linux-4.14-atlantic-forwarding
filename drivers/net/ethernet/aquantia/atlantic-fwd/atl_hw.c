@@ -114,6 +114,16 @@ static void atl_set_promisc(struct atl_hw *hw, bool enabled, bool allmulti)
 	}
 }
 
+int atl_vlan_promisc_status(struct net_device *ndev)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+
+	return ndev->flags & IFF_PROMISC ||
+	       nic->rxf_vlan.promisc_count ||
+	       !nic->rxf_vlan.vlans_active ||
+	       !(ndev->features & NETIF_F_HW_VLAN_CTAG_FILTER);
+}
+
 void atl_set_vlan_promisc(struct atl_hw *hw, int promisc)
 {
 	atl_write_bit(hw, ATL_RX_VLAN_FLT_CTRL1, 1, !!promisc);
@@ -911,9 +921,7 @@ void atl_set_rx_mode(struct net_device *ndev)
 	/* Enable promisc VLAN mode if IFF_PROMISC explicitly
 	 * requested or too many VIDs registered
 	 */
-	atl_set_vlan_promisc(hw,
-		ndev->flags & IFF_PROMISC || nic->rxf_vlan.promisc_count ||
-		!nic->rxf_vlan.vlans_active);
+	atl_set_vlan_promisc(hw, atl_vlan_promisc_status(ndev));
 
 	atl_set_promisc(hw, promisc_needed,
 			is_multicast_enabled && all_multi_needed);

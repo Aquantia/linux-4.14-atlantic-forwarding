@@ -448,7 +448,7 @@ static bool atl_checksum_workaround(struct sk_buff *skb,
 
 	if (((desc->pkt_type & atl_rx_pkt_type_vlan_msk) ==
 	    atl_rx_pkt_type_vlan) &&
-	    !(desc->rx_estat & atl_rx_estat_vlan_stripped)) 
+	    !(desc->rx_estat & atl_rx_estat_vlan_stripped))
 		ip_header_offset += sizeof(struct vlan_hdr);
 
 	if ((desc->pkt_type & atl_rx_pkt_type_vlan_msk) ==
@@ -2104,8 +2104,14 @@ void atl_stop_rings(struct atl_nic *nic)
 int atl_set_features(struct net_device *ndev, netdev_features_t features)
 {
 	netdev_features_t changed = ndev->features ^ features;
+	struct atl_nic *nic = netdev_priv(ndev);
 
 	ndev->features = features;
+
+	if (changed & NETIF_F_HW_VLAN_CTAG_FILTER) {
+		atl_set_vlan_promisc(&nic->hw,
+				atl_vlan_promisc_status(ndev));
+	}
 
 	if (changed & NETIF_F_LRO)
 		atl_set_lro(netdev_priv(ndev));
