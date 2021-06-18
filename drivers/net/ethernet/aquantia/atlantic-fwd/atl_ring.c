@@ -244,6 +244,14 @@ static uint32_t atl_insert_context(struct atl_txbuf *txbuf,
 	return tx_cmd;
 }
 
+static bool atl_ptp_udp(struct sk_buff *skb)
+{
+	return (ip_hdr(skb)->version == 4) &&
+		(ip_hdr(skb)->protocol == IPPROTO_UDP) &&
+		((udp_hdr(skb)->dest == htons(319)) ||
+		 (udp_hdr(skb)->dest == htons(320)));
+}
+
 netdev_tx_t atl_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
@@ -257,12 +265,9 @@ netdev_tx_t atl_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		 * and hardware PTP design of the chip. Otherwise ptp stream
 		 * will fail to sync
 		 */
-		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) ||
-		    unlikely((ip_hdr(skb)->version == 4) &&
-			     (ip_hdr(skb)->protocol == IPPROTO_UDP) &&
-			     ((udp_hdr(skb)->dest == htons(319)) ||
-			      (udp_hdr(skb)->dest == htons(320)))) ||
-		    unlikely(eth_hdr(skb)->h_proto == htons(ETH_P_1588)))
+		if (unlikely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) ||
+			     atl_ptp_udp(skb) ||
+			     (eth_hdr(skb)->h_proto == htons(ETH_P_1588))))
 			return atl_ptp_start_xmit(nic, skb);
 	}
 
@@ -1208,7 +1213,7 @@ int atl_clean_hwts_rx(struct atl_desc_ring *ring, int budget)
 		uint32_t space = ring_space(ring);
 		struct atl_rx_desc_hwts_wb *wb;
 		struct atl_rxbuf *rxbuf;
-		u64 ns;
+		u64 ns = 0;
 		DECLARE_SCRATCH_DESC(scratch);
 
 		if (space >= refill_batch)

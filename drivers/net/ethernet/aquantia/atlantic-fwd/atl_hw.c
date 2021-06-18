@@ -757,7 +757,7 @@ void atl_start_hw_global(struct atl_nic *nic)
 		(tpb_size * 32 * 66 / 100) << 16 |
 		(tpb_size * 32 * 50 / 100));
 	/* 4-TC | Enable TPB */
-	atl_set_bits(hw, ATL_TX_PBUF_CTRL1, BIT(8) | BIT(0));
+	atl_set_bits(hw, ATL_TX_PBUF_CTRL1, BIT(8) | BIT(2) | BIT(0));
 	/* TX Buffer clk gate  off */
 	if (hw->chip_id == ATL_ANTIGUA)
 		atl_clear_bits(hw, ATL_TX_PBUF_CTRL1, BIT(5));
