@@ -419,4 +419,120 @@ static inline void atl_fwd_notify(struct atl_nic *nic,
 				  enum atl_fwd_notify notif, void *data) {}
 #endif
 
+/* This is an extensible structure to collect various debug data from
+ * AQC device
+ */
+struct atl_crash_dump {
+	u32 length;		/* total crash structure length, in bytes */
+	u32 sections_count;	/* number of sections of type atl_crash_dump* following */
+	/* ...
+	 * Open ended structure:
+	 *
+	 * Current expected sections list (could be flexibly extended in future)
+	 *   atl_crash_dump_regs
+	 *   atl_crash_dump_type_fwiface (AQC113 only)
+	 *   atl_crash_dump_act_res
+	 *   atl_crash_dump_ring[number of configured rings]
+	*/
+};
+
+enum atl_crash_dump_types {
+	atl_crash_dump_type_regs     = 0,
+	atl_crash_dump_type_fwiface  = 1,
+	atl_crash_dump_type_act_res  = 2,
+	atl_crash_dump_type_ring     = 3,
+};
+
+/** Some of the registers we can not read safely from the device.
+ *  Those will not be read, with value 0xFFFFFFFF stored instead.
+ */
+struct atl_crash_dump_regs {
+	u32 type;
+	u32 length;
+	union {
+		u32 regs_data[0xA000/4];
+		struct{
+			u32 mif[0x1000/4];
+			u32 pci[0x1000/4];
+			u32 itr[0x1000/4];
+			u32 com[0x1000/4];
+			u32 msm[0x1000/4];
+			union {
+				u32 rx[0x2000/4];
+				struct{
+					u32 res1[0x700/4];
+					u32 pb_ctrl;
+					u32 res2;
+					u32 pb_status;
+					u32 res3;
+					/* 0x5710 */
+					struct{
+						u32 pb_reg1;
+						u32 pb_reg2;
+						u32 pb_reg3;
+					} pb[8];
+					u32 res4[0x100]; /* TODO */
+					/* 0x5B00 */
+					struct{
+						u32 base_lo;
+						u32 base_hi;
+						u32 ctrl;
+						u32 head;
+						u32 tail;
+						u32 status;
+						u32 size;
+						u32 threshold;
+					} dma_desc[32];
+				} layout;
+			};
+			u32 tx[0x3000/4];
+		} layout;
+	};
+};
+
+struct atl_crash_dump_fwiface {
+	u32 type;
+	u32 length;
+	/* struct fw_interface_in */
+	u32 fw_interface_in[0x1000/4];
+	/* struct fw_interface_out */
+	u32 fw_interface_out[0x1000/4];
+};
+
+struct atl_crash_dump_act_res {
+	u32 type;
+	u32 length;
+	u32 act_res_data[0x400];
+};
+
+struct atl_crash_dump_ring {
+	u32 type;
+	u32 length;
+	u32 index;
+	u8  ring_data[ATL_MAX_RING_SIZE*16];
+};
+
+struct atl_ext_stats {
+	struct atl_rx_ring_stats rx;
+	struct atl_tx_ring_stats tx;
+	struct atl_rx_fwd_ring_stats rx_fwd;
+
+	struct atl_ether_stats eth;
+};
+
+/**
+ * Direct statistics fetch call for the device
+ */
+int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats);
+
+/**
+ * Get the register and other crash related information from the device
+ * If @crash_dump is NULL, function will return the requested length of the buffer to
+ * store dump, in bytes
+ * if @crash_dump is not null, function will fill the buffer with crashdump
+ * sections filled, up to crash_dump->length
+ */
+int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump,
+		       int allocated_size);
+
 #endif
