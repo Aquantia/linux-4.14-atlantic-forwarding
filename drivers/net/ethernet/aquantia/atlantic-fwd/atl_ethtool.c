@@ -634,7 +634,7 @@ static const struct atl_stat_desc eth_stat_descs[] = {
 	ATL_ETH_STAT(tx_ether_pkts, tx_ether_pkts),
 	ATL_ETH_STAT(tx_ether_octets, tx_ether_octets),
 	ATL_ETH_STAT(rx_pause, rx_pause),
-	ATL_ETH_STAT(rx_ether_drops, rx_ether_drops),
+	ATL_ETH_STAT(rx_dma_drops, rx_dma_drops),
 	ATL_ETH_STAT(rx_ether_octets, rx_ether_octets),
 	ATL_ETH_STAT(rx_ether_pkts, rx_ether_pkts),
 	ATL_ETH_STAT(rx_ether_broacasts, rx_ether_broacasts),

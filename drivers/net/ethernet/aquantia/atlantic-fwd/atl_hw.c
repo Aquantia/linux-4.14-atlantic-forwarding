@@ -1382,7 +1382,7 @@ int atl_update_eth_stats(struct atl_nic *nic)
 	if (ret)
 		goto unlock_fw;
 
-	stats.rx_ether_drops = atl_read(hw, ATL_RX_DMA_STATS_CNT7);
+	stats.rx_dma_drops = atl_read(hw, ATL_RX_DMA_STATS_CNT7);
 
 	/* capture debug counters*/
 	atl_write_bit(hw, ATL_RX_RPF_DBG_CNT_CTRL, 0x1f, 1);
