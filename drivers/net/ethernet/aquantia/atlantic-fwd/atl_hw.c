@@ -1328,6 +1328,14 @@ static int __atl_fetch_msm2_stats(struct atl_hw *hw,
 	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_OCTETS_HI, &reg2, hwsem_put);
 	stats->tx_ether_octets = ((uint64_t)reg2 << 32) | reg;
 
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_LO, &reg, hwsem_put);
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_HI, &reg2, hwsem_put);
+	stats->tx_errors = ((uint64_t)reg2 << 32) | reg;
+
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_LO, &reg, hwsem_put);
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_HI, &reg2, hwsem_put);
+	stats->tx_errors += ((uint64_t)reg2 << 32) | reg;
+
 	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PAUSE_LO, &reg, hwsem_put);
 	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PAUSE_HI, &reg2, hwsem_put);
 	stats->rx_pause =  ((uint64_t)reg2 << 32) | reg;
@@ -1355,6 +1363,13 @@ static int __atl_fetch_msm2_stats(struct atl_hw *hw,
 	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ALIGN_ERRS_HI, &reg2, hwsem_put);
 	stats->rx_ether_crc_align_errs += ((uint64_t)reg2 << 32) | reg;
 
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_LO, &reg, hwsem_put);
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_HI, &reg2, hwsem_put);
+	stats->rx_errors = ((uint64_t)reg2 << 32) | reg;
+
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_LO, &reg, hwsem_put);
+	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_HI, &reg2, hwsem_put);
+	stats->rx_drops = ((uint64_t)reg2 << 32) | reg;
 hwsem_put:
 	atl_hwsem_put(hw, ATL_MCP_SEM_MSM);
 	return ret;
@@ -1383,6 +1398,18 @@ int atl_update_eth_stats(struct atl_nic *nic)
 		goto unlock_fw;
 
 	stats.rx_dma_drops = atl_read(hw, ATL_RX_DMA_STATS_CNT7);
+
+	stats.rx_dma_packets = atl_read(hw, ATL_RX_DMA_STATS_CNT1);
+	stats.rx_dma_packets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
+
+	stats.rx_dma_octets = atl_read(hw, ATL_RX_DMA_STATS_CNT3);
+	stats.rx_dma_octets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT4) << 32;
+
+	stats.tx_dma_packets = atl_read(hw, ATL_TX_DMA_STATS_CNT1);
+	stats.tx_dma_packets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
+
+	stats.tx_dma_octets = atl_read(hw, ATL_TX_DMA_STATS_CNT3);
+	stats.tx_dma_octets += (uint64_t)atl_read(hw, ATL_TX_DMA_STATS_CNT4) << 32;
 
 	/* capture debug counters*/
 	atl_write_bit(hw, ATL_RX_RPF_DBG_CNT_CTRL, 0x1f, 1);
@@ -1694,4 +1721,3 @@ static void atl2_hw_new_rx_filter_promisc(struct atl_hw *hw, bool promisc,
 				 off_action);
 
 }
-

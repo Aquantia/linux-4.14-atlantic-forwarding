@@ -904,3 +904,115 @@ int atl_fwd_resume_rings(struct atl_nic *nic)
 err:
 	return ret;
 }
+
+int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+
+	if (!stats)
+		return -EINVAL;
+
+	atl_update_eth_stats(nic);
+	atl_update_global_stats(nic);
+
+	memcpy(&nic->stats.rx, &stats->rx, sizeof(stats->rx));
+	memcpy(&nic->stats.tx, &stats->tx, sizeof(stats->tx));
+	memcpy(&nic->stats.rx_fwd, &stats->rx_fwd, sizeof(stats->rx_fwd));
+	memcpy(&nic->stats.eth, &stats->eth, sizeof(stats->eth));
+
+	return 0;
+}
+
+static int atl_get_crash_dump_regs(struct atl_hw *hw, struct atl_crash_dump_regs *section)
+{
+	int i;
+
+	section->type = atl_crash_dump_type_regs;
+	section->length = sizeof(struct atl_crash_dump_regs);
+
+	/* prefill with 'skip' value */
+	for (i = 0; i < sizeof(section->regs_data); i++)
+		section->regs_data[i] = 0xFFFFFFFF;
+
+	return section->length;
+}
+
+static int atl_get_crash_dump_fwiface(struct atl_hw *hw, struct atl_crash_dump_fwiface *section)
+{
+	int i;
+
+	section->type = atl_crash_dump_type_fwiface;
+	section->length = sizeof(struct atl_crash_dump_fwiface);
+
+	for (i = 0; i < ARRAY_SIZE(section->fw_interface_in); i++)
+		section->fw_interface_in[i] = atl_read(hw, ATL2_MIF_SHARED_BUFFER_IN(i));
+
+	for (i = 0; i < ARRAY_SIZE(section->fw_interface_out); i++)
+		section->fw_interface_out[i] = atl_read(hw, ATL2_MIF_SHARED_BUFFER_OUT(i));
+
+	return section->length;
+}
+
+static int atl_get_crash_dump_act_res(struct atl_hw *hw, struct atl_crash_dump_act_res *section)
+{
+	int i;
+
+	section->type = atl_crash_dump_type_act_res;
+	section->length = sizeof(struct atl_crash_dump_act_res);
+
+	for (i = 0; i < sizeof(section->act_res_data); i++)
+		section->act_res_data[i] = 0x1234;
+
+	return section->length;
+}
+
+int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump,
+		       int allocated_size)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+	int recorded_sz = 0;
+	int total_sz;
+	u8 *section;
+
+	total_sz = sizeof(struct atl_crash_dump)
+		+ sizeof(struct atl_crash_dump_regs)
+		+ sizeof(struct atl_crash_dump_ring) * nic->nvecs;
+
+	if (nic->hw.chip_id == ATL_ANTIGUA) {
+		total_sz += sizeof(struct atl_crash_dump_fwiface);
+		total_sz += sizeof(struct atl_crash_dump_act_res);
+	}
+
+	if (!crash_dump)
+		return total_sz;
+
+	if (allocated_size < total_sz)
+		return -EINVAL;
+
+	crash_dump->length = sizeof(*crash_dump);
+	crash_dump->sections_count = 0;
+
+	section = (void *)(crash_dump + 1);
+
+	recorded_sz += atl_get_crash_dump_regs(&nic->hw, (void *)section);
+	crash_dump->sections_count++;
+	crash_dump->length += recorded_sz;
+	section = section + recorded_sz;
+
+	if (nic->hw.chip_id == ATL_ANTIGUA) {
+		recorded_sz += atl_get_crash_dump_fwiface(&nic->hw, (void *)section);
+		crash_dump->sections_count++;
+		crash_dump->length += recorded_sz;
+		section = section + recorded_sz;
+
+		recorded_sz += atl_get_crash_dump_act_res(&nic->hw, (void *)section);
+		crash_dump->sections_count++;
+		crash_dump->length += recorded_sz;
+		section = section + recorded_sz;
+	}
+
+	if (total_sz != recorded_sz)
+		printk(KERN_ERR "Implementation is incomplete!");
+
+	return recorded_sz;
+}
