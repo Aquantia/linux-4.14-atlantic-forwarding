@@ -634,7 +634,6 @@ static const struct atl_stat_desc eth_stat_descs[] = {
 	ATL_ETH_STAT(tx_ether_pkts, tx_ether_pkts),
 	ATL_ETH_STAT(tx_ether_octets, tx_ether_octets),
 	ATL_ETH_STAT(rx_pause, rx_pause),
-	ATL_ETH_STAT(rx_dma_drops, rx_dma_drops),
 	ATL_ETH_STAT(rx_ether_octets, rx_ether_octets),
 	ATL_ETH_STAT(rx_ether_pkts, rx_ether_pkts),
 	ATL_ETH_STAT(rx_ether_broacasts, rx_ether_broacasts),
@@ -642,6 +641,13 @@ static const struct atl_stat_desc eth_stat_descs[] = {
 	ATL_ETH_STAT(rx_ether_crc_align_errs, rx_ether_crc_align_errs),
 	ATL_ETH_STAT(rx_filter_host, rx_filter_host),
 	ATL_ETH_STAT(rx_filter_lost, rx_filter_lost),
+	ATL_ETH_STAT(rx_errors, rx_errors),
+	ATL_ETH_STAT(rx_drops, rx_drops),
+	ATL_ETH_STAT(rx_dma_packets, rx_dma_packets),
+	ATL_ETH_STAT(rx_dma_octets, rx_dma_octets),
+	ATL_ETH_STAT(rx_dma_drops, rx_dma_drops),
+	ATL_ETH_STAT(tx_dma_packets, tx_dma_packets),
+	ATL_ETH_STAT(tx_dma_octets, tx_dma_octets),
 };
 
 #define ATL_PRIV_FLAG(_name, _bit)		\
