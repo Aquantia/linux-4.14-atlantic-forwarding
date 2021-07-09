@@ -32,8 +32,6 @@ struct atl_nic;
 
 #define ATL_MAX_QUEUES 8
 
-#include "atl_fwd.h"
-
 struct atl_ptp;
 
 enum {
@@ -425,18 +423,6 @@ int atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val);
 int atl_update_eth_stats(struct atl_nic *nic);
 void atl_adjust_eth_stats(struct atl_ether_stats *stats,
 	struct atl_ether_stats *base, bool add);
-void atl_fwd_release_rings(struct atl_nic *nic);
-#if IS_ENABLED(CONFIG_ATLFWD_FWD)
-enum atl_fwd_notify;
-int atl_fwd_suspend_rings(struct atl_nic *nic);
-int atl_fwd_resume_rings(struct atl_nic *nic);
-void atl_fwd_notify(struct atl_nic *nic, enum atl_fwd_notify notif, void *data);
-#else
-static inline int atl_fwd_suspend_rings(struct atl_nic *nic) { return 0; }
-static inline int atl_fwd_resume_rings(struct atl_nic *nic) { return 0; }
-static inline void atl_fwd_notify(struct atl_nic *nic,
-				  enum atl_fwd_notify notif, void *data) {}
-#endif
 int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay);
 void atl_refresh_rxfs(struct atl_nic *nic);
 void atl_schedule_work(struct atl_nic *nic);

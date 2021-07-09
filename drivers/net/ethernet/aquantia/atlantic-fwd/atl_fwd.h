@@ -405,4 +405,18 @@ enum atl_fwd_ring_state {
 	ATL_FWR_ST_EVT_ENABLED = BIT(1),
 };
 
+#if IS_ENABLED(CONFIG_ATLFWD_FWD)
+enum atl_fwd_notify;
+void atl_fwd_release_rings(struct atl_nic *nic);
+int atl_fwd_suspend_rings(struct atl_nic *nic);
+int atl_fwd_resume_rings(struct atl_nic *nic);
+void atl_fwd_notify(struct atl_nic *nic, enum atl_fwd_notify notif, void *data);
+#else
+static inline void atl_fwd_release_rings(struct atl_nic *nic) {}
+static inline int atl_fwd_suspend_rings(struct atl_nic *nic) { return 0; }
+static inline int atl_fwd_resume_rings(struct atl_nic *nic) { return 0; }
+static inline void atl_fwd_notify(struct atl_nic *nic,
+				  enum atl_fwd_notify notif, void *data) {}
+#endif
+
 #endif
