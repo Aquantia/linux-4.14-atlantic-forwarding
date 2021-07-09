@@ -12,6 +12,7 @@
 #include <linux/etherdevice.h>
 #include "atl_common.h"
 #include "atl_desc.h"
+#include "atl_fwd.h"
 
 static const char *atl_fwd_dir_str(struct atl_fwd_ring *ring)
 {

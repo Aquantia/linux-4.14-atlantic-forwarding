@@ -17,6 +17,7 @@
 #include <linux/pm_runtime.h>
 #include "atl_macsec.h"
 #include "atl_ptp.h"
+#include "atl_fwd.h"
 
 const char atl_driver_name[] = "atlantic-fwd";
 
@@ -765,9 +766,7 @@ static void atl_remove(struct pci_dev *pdev)
 	atl_ptp_unregister(nic);
 	unregister_netdev(nic->ndev);
 
-#if IS_ENABLED(CONFIG_ATLFWD_FWD)
 	atl_fwd_release_rings(nic);
-#endif
 
 	atl_clear_datapath(nic);
 

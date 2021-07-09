@@ -21,6 +21,7 @@
 #include "atl_fwdnl.h"
 
 #include "atl_common.h"
+#include "atl_fwd.h"
 #include "atl_fwdnl_params.h"
 #include "atl_ring.h"
 #include "atl_trace.h"
