@@ -1,3 +1,12 @@
+Version 1.1.19
+Date 12/07/2021
+==============
+[ATLDRV-1744] - Add FW version check in Atl-fwd driver
+- Move check for PTP UDP packets to separate function, Enable TX pad insert and Handle all FFs in ptp tx TS
+[ATLDRV-1582] - Link not Up after FLR reset
+[ATLDRV-1653] - Packet with vlan id 1 doesn't get received when rx vlan filter is disabled
+[ATLDRV-1659] - Failed to compile with CONFIG_ATLFWD_FWD=y flag on RHEL 8.3 kernel
+
 Version 1.1.18
 Date 21/02/2021
 ==============
