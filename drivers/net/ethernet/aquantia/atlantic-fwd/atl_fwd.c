@@ -14,6 +14,40 @@
 #include "atl_desc.h"
 #include "atl_fwd.h"
 
+static u32 atl_skip_reglist[] = {
+	/* PCIE */
+	0x00001030, 0x00001200, 0x00001514, 0x00001F00, 0x00001F04, 0x00001F20, 0x00001F24,
+
+	/* INTR Registers */
+	0x000021A0, 0x000021A4, 0x000021A8,
+
+	/* COM Registers */
+	0x000030A0, 0x000030A8, 0x00003900, 0x00003920,
+
+	/* MSM2 Registers */
+	0x00000040,
+
+	/* RX Registers */
+	0x00005108, 0x000054CC, 0x000055B0, 0x000055B4, 0x000055C0, 0x000055E0, 0x000055E4,
+	0x00005640, 0x00005718, 0x00005728, 0x00005738, 0x00005748, 0x00005758, 0x00005768,
+	0x00005778, 0x00005788, 0x00005808, 0x0000580C, 0x00005A10, 0x00005B14, 0x00005B34,
+	0x00005B54, 0x00005B74, 0x00005B94, 0x00005BB4, 0x00005BD4, 0x00005BF4, 0x00005C14,
+	0x00005C34, 0x00005C54, 0x00005C74, 0x00005C94, 0x00005CB4, 0x00005CD4, 0x00005CF4,
+	0x00005D14, 0x00005D34, 0x00005D54, 0x00005D74, 0x00005D94, 0x00005DB4, 0x00005DD4,
+	0x00005DF4, 0x00005E14, 0x00005E34, 0x00005E54, 0x00005E74, 0x00005E94, 0x00005EB4,
+	0x00005ED4, 0x00005EF4, 0x00006900, 0x00006F00, 0x00006F20,
+
+	/* TX Registers */
+	0x00007808, 0x00007848, 0x0000784C, 0x000078B0, 0x000078B4, 0x00007918, 0x00007928,
+	0x00007938, 0x00007948, 0x00007958, 0x00007968, 0x00007978, 0x00007988, 0x00007A34,
+	0x00007B10, 0x00007B14, 0x00007B18, 0x00007C14, 0x00007C54, 0x00007C94, 0x00007CD4,
+	0x00007D14, 0x00007D54, 0x00007D94, 0x00007DD4, 0x00007E14, 0x00007E54, 0x00007E94,
+	0x00007ED4, 0x00007F14, 0x00007F54, 0x00007F94, 0x00007FD4, 0x00008014, 0x00008054,
+	0x00008094, 0x000080D4, 0x00008114, 0x00008154, 0x00008194, 0x000081D4, 0x00008214,
+	0x00008254, 0x00008294, 0x000082D4, 0x00008314, 0x00008354, 0x00008394, 0x000083D4,
+	0x00008900, 0x00008904, 0x00008F00, 0x00008F20,
+};
+
 static const char *atl_fwd_dir_str(struct atl_fwd_ring *ring)
 {
 	return ring->flags & ATL_FWR_TX ? "Tx" : "Rx";
@@ -923,16 +957,34 @@ int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats)
 	return 0;
 }
 
+static bool atl_skip_register(u32 reg)
+{
+	int i, count;
+
+	count = sizeof(atl_skip_reglist) / sizeof(u32);
+	for (i = 0; i < count; i++)
+		if (atl_skip_reglist[i] == reg)
+			return true;
+
+	return false;
+}
+
 static int atl_get_crash_dump_regs(struct atl_hw *hw, struct atl_crash_dump_regs *section)
 {
-	int i;
+	int addr, index;
 
 	section->type = atl_crash_dump_type_regs;
 	section->length = sizeof(struct atl_crash_dump_regs);
 
 	/* prefill with 'skip' value */
-	for (i = 0; i < sizeof(section->regs_data); i++)
-		section->regs_data[i] = 0xFFFFFFFF;
+	for (addr = 0; addr < sizeof(section->regs_data); addr++)
+		section->regs_data[addr] = 0xFFFFFFFF;
+
+	for (addr = 0x1000, index = 0x1000 / 4; addr < 0xA000; addr += 4, index++) {
+		if (atl_skip_register(addr))
+			continue;
+		section->regs_data[index] = atl_read(hw, addr);
+	}
 
 	return section->length;
 }

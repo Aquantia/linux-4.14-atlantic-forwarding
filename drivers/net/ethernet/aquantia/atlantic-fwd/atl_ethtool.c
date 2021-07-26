@@ -20,6 +20,7 @@
 #include "atl_fwdnl.h"
 #include "atl_macsec.h"
 #include "atl_ptp.h"
+#include "atl_fwd.h"
 
 static uint32_t atl_ethtool_get_link(struct net_device *ndev)
 {
@@ -3084,6 +3085,18 @@ static void atl_ethtool_complete(struct net_device *ndev)
 	pm_runtime_put(&nic->hw.pdev->dev);
 }
 
+static int atl_ethool_get_regs_len(struct net_device *ndev)
+{
+	return atl_get_crash_dump(ndev, NULL, 0);
+}
+
+static void atl_ethool_get_regs(struct net_device *ndev, struct ethtool_regs *regs, void *buf)
+{
+	regs->version = 0;
+	memset(buf, 0, regs->len);
+	atl_get_crash_dump(ndev, buf, regs->len);
+}
+
 const struct ethtool_ops atl_ethtool_ops = {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 0)
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
@@ -3126,4 +3139,6 @@ const struct ethtool_ops atl_ethtool_ops = {
 	.set_wol = atl_set_wol,
 	.begin = atl_ethtool_begin,
 	.complete = atl_ethtool_complete,
+	.get_regs_len = atl_ethool_get_regs_len,
+	.get_regs = atl_ethool_get_regs,
 };
