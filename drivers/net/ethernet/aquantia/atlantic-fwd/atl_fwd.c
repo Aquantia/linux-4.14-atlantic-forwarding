@@ -949,10 +949,10 @@ int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats)
 	atl_update_eth_stats(nic);
 	atl_update_global_stats(nic);
 
-	memcpy(&nic->stats.rx, &stats->rx, sizeof(stats->rx));
-	memcpy(&nic->stats.tx, &stats->tx, sizeof(stats->tx));
-	memcpy(&nic->stats.rx_fwd, &stats->rx_fwd, sizeof(stats->rx_fwd));
-	memcpy(&nic->stats.eth, &stats->eth, sizeof(stats->eth));
+	memcpy(&stats->rx, &nic->stats.rx, sizeof(stats->rx));
+	memcpy(&stats->tx, &nic->stats.tx, sizeof(stats->tx));
+	memcpy(&stats->rx_fwd, &nic->stats.rx_fwd, sizeof(stats->rx_fwd));
+	memcpy(&stats->eth, &nic->stats.eth, sizeof(stats->eth));
 
 	return 0;
 }
