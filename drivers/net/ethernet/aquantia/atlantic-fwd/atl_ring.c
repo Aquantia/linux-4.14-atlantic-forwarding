@@ -778,6 +778,9 @@ static int atl_fill_hwts_rx(struct atl_desc_ring *ring, uint32_t count, bool ato
 		count--;
 	}
 
+	wmb();
+	atl_write(ring_hw(ring), ATL_RX_RING_TAIL(ring), ring->tail);
+
 	return 0;
 }
 
