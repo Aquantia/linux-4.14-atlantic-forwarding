@@ -450,7 +450,7 @@ struct atl_crash_dump_regs {
 	u32 type;
 	u32 length;
 	union {
-		u32 regs_data[0xA000/4];
+		u32 regs_data[0x9000/4];
 		struct{
 			u32 mif[0x1000/4];
 			u32 pci[0x1000/4];
@@ -485,7 +485,7 @@ struct atl_crash_dump_regs {
 					} dma_desc[32];
 				} layout;
 			};
-			u32 tx[0x3000/4];
+			u32 tx[0x2000/4];
 		} layout;
 	};
 };
@@ -499,17 +499,27 @@ struct atl_crash_dump_fwiface {
 	u32 fw_interface_out[0x1000/4];
 };
 
+/* Record table size of 128 with each entry holding (tag, mask, action) */
+#define ATL_ACT_RES_TABLE_SIZE 384
 struct atl_crash_dump_act_res {
 	u32 type;
 	u32 length;
-	u32 act_res_data[0x400];
+	u32 act_res_data[ATL_ACT_RES_TABLE_SIZE];
 };
 
+/* max_size = 'ring_size * (tx + rx) * 16 byte raw descriptor data' */
+#define ATL_MAX_RING_DESC_SIZE ATL_MAX_RING_SIZE * 32
 struct atl_crash_dump_ring {
 	u32 type;
 	u32 length;
 	u32 index;
-	u8  ring_data[ATL_MAX_RING_SIZE*16];
+	u32 rx_head;
+	u32 rx_tail;
+	u32 tx_head;
+	u32 tx_tail;
+	u32 rx_ring_size;
+	u32 tx_ring_size;
+	u8  ring_data[ATL_MAX_RING_DESC_SIZE];
 };
 
 struct atl_ext_stats {
