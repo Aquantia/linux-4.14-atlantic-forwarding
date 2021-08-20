@@ -13,6 +13,7 @@
 #include "atl_common.h"
 #include "atl_desc.h"
 #include "atl_fwd.h"
+#include "atl_ring.h"
 
 static u32 atl_skip_reglist[] = {
 	/* PCIE */
@@ -980,7 +981,7 @@ static int atl_get_crash_dump_regs(struct atl_hw *hw, struct atl_crash_dump_regs
 	for (addr = 0; addr < sizeof(section->regs_data); addr++)
 		section->regs_data[addr] = 0xFFFFFFFF;
 
-	for (addr = 0x1000, index = 0x1000 / 4; addr < 0xA000; addr += 4, index++) {
+	for (addr = 0x1000, index = 0x1000 / 4; addr < 0x9000; addr += 4, index++) {
 		if (atl_skip_register(addr))
 			continue;
 		section->regs_data[index] = atl_read(hw, addr);
@@ -1007,28 +1008,70 @@ static int atl_get_crash_dump_fwiface(struct atl_hw *hw, struct atl_crash_dump_f
 
 static int atl_get_crash_dump_act_res(struct atl_hw *hw, struct atl_crash_dump_act_res *section)
 {
-	int i;
+	int i, idx, err;
 
 	section->type = atl_crash_dump_type_act_res;
 	section->length = sizeof(struct atl_crash_dump_act_res);
 
-	for (i = 0; i < sizeof(section->act_res_data); i++)
-		section->act_res_data[i] = 0x1234;
+	err = atl_hwsem_get(hw, ATL2_MCP_SEM_ACT_RSLVR);
+	if (err) {
+		printk("Failed to aquire act_res semaphore\n");
+		goto ret;
+	}
 
+	for (i = 0, idx = 0; i < ATL_ACT_RES_TABLE_SIZE / 3; i++) {
+		section->act_res_data[idx++] = atl_read(hw, ATL2_RPF_ACT_RSLVR_REQ_TAG(i));
+		section->act_res_data[idx++] = atl_read(hw, ATL2_RPF_ACT_RSLVR_TAG_MASK(i));
+		section->act_res_data[idx++] = atl_read(hw, ATL2_RPF_ACT_RSLVR_ACTN(i));
+	}
+
+	atl_hwsem_put(hw, ATL2_MCP_SEM_ACT_RSLVR);
+
+ret:
 	return section->length;
 }
+
+static int atl_get_crash_dump_ring(struct atl_nic *nic, int idx,
+				   struct atl_crash_dump_ring *section)
+{
+	int size = sizeof(struct atl_crash_dump_ring), offset;
+	struct atl_queue_vec *qvec = &nic->qvecs[idx];
+	struct atl_hw_ring *hwring;
+
+	if (!test_bit(ATL_ST_UP, &nic->hw.state)) {
+		memset(section, 0, size);
+		goto ret;
+	}
+
+	section->type = atl_crash_dump_type_ring;
+	section->index = qvec->idx;
+	section->length = size;
+	section->rx_head = qvec->rx.head;
+	section->rx_tail = qvec->rx.tail;
+	section->tx_head = qvec->tx.head;
+	section->tx_tail = qvec->tx.tail;
+	hwring = &qvec->rx.hw;
+	section->rx_ring_size = hwring->size;
+	memcpy(section->ring_data, hwring->descs, hwring->size * sizeof(*hwring->descs));
+	offset = hwring->size * sizeof(*hwring->descs);
+	hwring = &qvec->tx.hw;
+	section->tx_ring_size = hwring->size;
+	memcpy(section->ring_data + offset, hwring->descs, hwring->size * sizeof(*hwring->descs));
+
+ret:
+	return size;
+}
+
 
 int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump,
 		       int allocated_size)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
-	int recorded_sz = 0;
-	int total_sz;
+	int recorded_sz = 0, total_sz, i;
 	u8 *section;
 
-	total_sz = sizeof(struct atl_crash_dump)
-		+ sizeof(struct atl_crash_dump_regs)
-		+ sizeof(struct atl_crash_dump_ring) * nic->nvecs;
+	total_sz = sizeof(struct atl_crash_dump) + sizeof(struct atl_crash_dump_regs) +
+			sizeof(struct atl_crash_dump_ring) * nic->nvecs;
 
 	if (nic->hw.chip_id == ATL_ANTIGUA) {
 		total_sz += sizeof(struct atl_crash_dump_fwiface);
@@ -1046,25 +1089,32 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 
 	section = (void *)(crash_dump + 1);
 
-	recorded_sz += atl_get_crash_dump_regs(&nic->hw, (void *)section);
+	recorded_sz = atl_get_crash_dump_regs(&nic->hw, (void *)section);
 	crash_dump->sections_count++;
 	crash_dump->length += recorded_sz;
-	section = section + recorded_sz;
+	section += recorded_sz;
 
 	if (nic->hw.chip_id == ATL_ANTIGUA) {
-		recorded_sz += atl_get_crash_dump_fwiface(&nic->hw, (void *)section);
+		recorded_sz = atl_get_crash_dump_fwiface(&nic->hw, (void *)section);
 		crash_dump->sections_count++;
 		crash_dump->length += recorded_sz;
-		section = section + recorded_sz;
+		section += recorded_sz;
 
-		recorded_sz += atl_get_crash_dump_act_res(&nic->hw, (void *)section);
+		recorded_sz = atl_get_crash_dump_act_res(&nic->hw, (void *)section);
 		crash_dump->sections_count++;
 		crash_dump->length += recorded_sz;
-		section = section + recorded_sz;
+		section += recorded_sz;
 	}
 
-	if (total_sz != recorded_sz)
+	for (i = 0; i < nic->nvecs; i++) {
+		recorded_sz = atl_get_crash_dump_ring(nic, i, (void *)section);
+		crash_dump->sections_count++;
+		crash_dump->length += recorded_sz;
+		section += recorded_sz;
+	}
+
+	if (total_sz != crash_dump->length)
 		printk(KERN_ERR "Implementation is incomplete!");
 
-	return recorded_sz;
+	return crash_dump->length;
 }
