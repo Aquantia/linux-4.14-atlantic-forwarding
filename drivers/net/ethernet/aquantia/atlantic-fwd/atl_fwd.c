@@ -957,6 +957,7 @@ int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats)
 
 	return 0;
 }
+EXPORT_SYMBOL(atl_get_ext_stats);
 
 static bool atl_skip_register(u32 reg)
 {
@@ -1118,3 +1119,4 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 
 	return crash_dump->length;
 }
+EXPORT_SYMBOL(atl_get_crash_dump);
