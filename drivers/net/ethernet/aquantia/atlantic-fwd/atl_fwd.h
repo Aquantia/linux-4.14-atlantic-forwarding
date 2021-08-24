@@ -456,7 +456,7 @@ struct atl_crash_dump_regs {
 			u32 pci[0x1000/4];
 			u32 itr[0x1000/4];
 			u32 com[0x1000/4];
-			u32 msm[0x1000/4];
+			u32 mac_phy[0x1000/4];
 			union {
 				u32 rx[0x2000/4];
 				struct{
