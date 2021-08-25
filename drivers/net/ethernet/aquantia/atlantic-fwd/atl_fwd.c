@@ -1073,6 +1073,7 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 	int recorded_sz = 0, total_sz, i;
+	u32 fw_rev = nic->hw.mcp.fw_rev;
 	u8 *section;
 
 	total_sz = sizeof(struct atl_crash_dump) + sizeof(struct atl_crash_dump_regs) +
@@ -1091,6 +1092,10 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 
 	crash_dump->length = sizeof(*crash_dump);
 	crash_dump->sections_count = 0;
+
+	strlcpy(crash_dump->drv_version, ATL_VERSION, sizeof(crash_dump->drv_version));
+	snprintf(crash_dump->fw_version, sizeof(crash_dump->fw_version),
+		"%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff, fw_rev & 0xffff);
 
 	section = (void *)(crash_dump + 1);
 
