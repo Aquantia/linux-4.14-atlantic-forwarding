@@ -385,7 +385,7 @@ int atl_do_reset(struct atl_nic *nic)
 
 	hw->mcp.ops->dump_cfg(hw);
 
-	atl_stop(nic, true);
+	atl_stop(nic, false);
 
 	atl_fwd_suspend_rings(nic);
 
