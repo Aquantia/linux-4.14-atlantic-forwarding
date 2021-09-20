@@ -11,25 +11,6 @@
 #ifndef _ATL_DUMP_H_
 #define _ATL_DUMP_H_
 
-/* This is an extensible structure to collect various debug data from
- * AQC device
- */
-struct atl_crash_dump {
-	u32 length;		/* total crash structure length, in bytes */
-	u32 sections_count;	/* number of sections of type atl_crash_dump* following */
-	u8 drv_version[16];
-	u8 fw_version[16];
-	/* ...
-	 * Open ended structure:
-	 *
-	 * Current expected sections list (could be flexibly extended in future)
-	 *   atl_crash_dump_regs
-	 *   atl_crash_dump_type_fwiface (AQC113 only)
-	 *   atl_crash_dump_act_res
-	 *   atl_crash_dump_ring[number of configured rings]
-	*/
-};
-
 enum atl_crash_dump_types {
 	atl_crash_dump_type_regs     = 0,
 	atl_crash_dump_type_fwiface  = 1,
@@ -115,5 +96,28 @@ struct atl_crash_dump_ring {
 	u32 tx_ring_size;
 	u8  ring_data[ATL_MAX_RING_DESC_SIZE];
 };
+
+/* This is an extensible structure to collect various debug data from
+ * AQC device
+ */
+struct atl_crash_dump {
+	u32 length;		/* total crash structure length, in bytes */
+	u32 sections_count;	/* number of sections of type atl_crash_dump* following */
+	u8 drv_version[16];
+	u8 fw_version[16];
+	union {
+		struct {
+			struct atl_crash_dump_regs regs;
+			struct atl_crash_dump_fwiface fwiface;
+			struct atl_crash_dump_act_res act_res;
+			struct atl_crash_dump_ring ring[ATL_MAX_QUEUES];
+		} antigua;
+		struct {
+			struct atl_crash_dump_regs regs;
+			struct atl_crash_dump_ring ring[ATL_MAX_QUEUES];
+		} atlantic;
+	};
+};
+
 
 #endif
