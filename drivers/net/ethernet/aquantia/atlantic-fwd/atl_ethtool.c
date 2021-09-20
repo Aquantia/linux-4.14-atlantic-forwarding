@@ -3088,14 +3088,14 @@ static void atl_ethtool_complete(struct net_device *ndev)
 
 static int atl_ethool_get_regs_len(struct net_device *ndev)
 {
-	return atl_get_crash_dump(ndev, NULL, 0);
+	return atl_get_crash_dump(ndev, NULL);
 }
 
 static void atl_ethool_get_regs(struct net_device *ndev, struct ethtool_regs *regs, void *buf)
 {
 	regs->version = 0;
 	memset(buf, 0, regs->len);
-	atl_get_crash_dump(ndev, buf, regs->len);
+	atl_get_crash_dump(ndev, buf);
 }
 
 const struct ethtool_ops atl_ethtool_ops = {

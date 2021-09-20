@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stddef.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -253,7 +254,7 @@ int main(int argc, char *argv[])
 	if (ret)
 		goto err;
 
-	offset = sizeof(struct atl_crash_dump);
+	offset = offsetof(struct atl_crash_dump, antigua);
 	for (i = 0; i < crash_dump->sections_count; i++) {
 		header = (struct section_header *)(buffer + offset);
 		switch (header->type) {

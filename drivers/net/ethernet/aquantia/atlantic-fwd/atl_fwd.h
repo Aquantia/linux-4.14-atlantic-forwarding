@@ -440,7 +440,6 @@ int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats);
  * if @crash_dump is not null, function will fill the buffer with crashdump
  * sections filled, up to crash_dump->length
  */
-int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump,
-		       int allocated_size);
+int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump);
 
 #endif

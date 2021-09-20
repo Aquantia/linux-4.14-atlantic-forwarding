@@ -1068,27 +1068,15 @@ ret:
 }
 
 
-int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump,
-		       int allocated_size)
+int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
-	int recorded_sz = 0, total_sz, i;
 	u32 fw_rev = nic->hw.mcp.fw_rev;
+	int recorded_sz = 0, i, nvecs;
 	u8 *section;
 
-	total_sz = sizeof(struct atl_crash_dump) + sizeof(struct atl_crash_dump_regs) +
-			sizeof(struct atl_crash_dump_ring) * nic->nvecs;
-
-	if (nic->hw.chip_id == ATL_ANTIGUA) {
-		total_sz += sizeof(struct atl_crash_dump_fwiface);
-		total_sz += sizeof(struct atl_crash_dump_act_res);
-	}
-
 	if (!crash_dump)
-		return total_sz;
-
-	if (allocated_size < total_sz)
-		return -EINVAL;
+		return sizeof(struct atl_crash_dump);
 
 	crash_dump->length = sizeof(*crash_dump);
 	crash_dump->sections_count = 0;
@@ -1097,7 +1085,10 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 	snprintf(crash_dump->fw_version, sizeof(crash_dump->fw_version),
 		"%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff, fw_rev & 0xffff);
 
-	section = (void *)(crash_dump + 1);
+	if (nic->hw.chip_id == ATL_ANTIGUA)
+		section = (void *)&crash_dump->antigua.regs;
+	else
+		section = (void *)&crash_dump->atlantic.regs;
 
 	recorded_sz = atl_get_crash_dump_regs(&nic->hw, (void *)section);
 	crash_dump->sections_count++;
@@ -1116,15 +1107,13 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 		section += recorded_sz;
 	}
 
-	for (i = 0; i < nic->nvecs; i++) {
+	nvecs = min_t(int, nic->nvecs, ATL_MAX_QUEUES);
+	for (i = 0; i < nvecs; i++) {
 		recorded_sz = atl_get_crash_dump_ring(nic, i, (void *)section);
 		crash_dump->sections_count++;
 		crash_dump->length += recorded_sz;
 		section += recorded_sz;
 	}
-
-	if (total_sz != crash_dump->length)
-		printk(KERN_ERR "Implementation is incomplete!");
 
 	return crash_dump->length;
 }
