@@ -1,3 +1,12 @@
+Version 1.1.21
+Date 29/09/2021
+==============
+- Atl-fwd: Fix name string for mac_phy stats in ethtool-dump
+- Atl-fwd: Minor additions to ethtool dump implementation
+- Atl-fwd: Add ethtool-dump parser
+- ATLDRV-1776: Fix for link flip during IPA ring reconfig
+- Atl-fwd: Update crash-dump structure to fixed size structure
+
 Version 1.1.20
 Date 23/08/2021
 ==============
