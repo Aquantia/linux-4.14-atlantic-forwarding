@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "atl_dump_parser.h"
-#include "atl_dump.h"
+#include "../atl_dump.h"
 
 #define DEV_FILE "device.txt"
 #define REG_FILE "registers.txt"
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
 	tm_val = localtime(&t);
 	tm_val = NULL;
 	if (tm_val)
-		snprintf(out_folder, 64, "%s_%02d-%02d-%02ld_%02d-%02d-%02d", argv[1],
+		snprintf(out_folder, 64, "%s_%02d-%02d-%02d_%02d-%02d-%02d", argv[1],
 			 tm_val->tm_mon + 1, (int) tm_val->tm_mday, 1900 +  tm_val->tm_year,
 			 tm_val->tm_hour,  tm_val->tm_min,  tm_val->tm_sec);
 	else
