@@ -20,7 +20,7 @@
 #include <linux/netdevice.h>
 #include <linux/moduleparam.h>
 
-#define ATL_VERSION "1.1.23"
+#define ATL_VERSION "1.1.24"
 
 struct atl_nic;
 
@@ -433,5 +433,7 @@ int atl_update_thermal_flag(struct atl_hw *hw, int bit, bool val);
 int atl_verify_thermal_limits(struct atl_hw *hw, struct atl_thermal *thermal);
 int atl_do_reset(struct atl_nic *nic);
 int atl_set_media_detect(struct atl_nic *nic, bool on);
+int atl_set_downshift(struct atl_nic *nic, bool on);
+int atl2_get_fw_version(struct atl_hw *hw);
 
 #endif
