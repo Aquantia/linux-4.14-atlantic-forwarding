@@ -46,7 +46,7 @@ static int atl_apply_macsec_cfg(struct atl_hw *hw);
 static int atl_apply_secy_cfg(struct atl_hw *hw,
 			      const struct macsec_secy *secy);
 
-static void atl_ether_addr_to_mac(u32 mac[2], unsigned char *emac)
+static void atl_ether_addr_to_mac(u32 mac[2], const unsigned char *emac)
 {
 	u32 tmp[2];
 
@@ -459,8 +459,10 @@ static int atl_mdo_dev_open(struct macsec_context *ctx)
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
 	int ret = 0;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	if (netif_carrier_ok(nic->ndev))
 		ret = atl_apply_secy_cfg(&nic->hw, ctx->secy);
@@ -474,8 +476,10 @@ static int atl_mdo_dev_stop(struct macsec_context *ctx)
 {
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_fwd_notify(nic, ATL_FWD_NOTIFY_MACSEC_OFF, ctx->secy->netdev);
 
@@ -661,8 +665,10 @@ static int atl_mdo_add_secy(struct macsec_context *ctx)
 	if (txsc_idx == ATL_MACSEC_MAX_SC)
 		return -ENOSPC;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	hw->macsec_cfg.sc_sa = sc_sa;
 	hw->macsec_cfg.atl_txsc[txsc_idx].hw_sc_idx =
@@ -691,8 +697,10 @@ static int atl_mdo_upd_secy(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -ENOENT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	secy = hw->macsec_cfg.atl_txsc[txsc_idx].sw_secy;
 
@@ -764,8 +772,10 @@ static int atl_mdo_del_secy(struct macsec_context *ctx)
 {
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	return atl_clear_secy(nic, ctx->secy, ATL_CLEAR_ALL);
 }
@@ -828,8 +838,10 @@ static int atl_mdo_add_txsa(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	set_bit(ctx->sa.assoc_num, &atl_txsc->tx_sa_idx_busy);
@@ -857,8 +869,10 @@ static int atl_mdo_upd_txsa(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
@@ -906,8 +920,10 @@ static int atl_mdo_del_txsa(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	return atl_clear_txsa(nic, &nic->hw.macsec_cfg.atl_txsc[txsc_idx],
 			      ctx->sa.assoc_num, ATL_CLEAR_ALL);
@@ -1023,8 +1039,10 @@ static int atl_mdo_add_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx >= rxsc_idx_max)
 		return -ENOSPC;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	cfg->atl_rxsc[rxsc_idx].hw_sc_idx =
 		atl_to_hw_sc_idx(rxsc_idx, cfg->sc_sa);
@@ -1054,8 +1072,10 @@ static int atl_mdo_upd_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	if (netif_carrier_ok(nic->ndev) && netif_running(ctx->secy->netdev))
 		return atl_set_rxsc(&nic->hw, rxsc_idx);
@@ -1128,8 +1148,10 @@ static int atl_mdo_del_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	if (netif_carrier_ok(nic->ndev))
 		clear_type = ATL_CLEAR_ALL;
@@ -1209,8 +1231,10 @@ static int atl_mdo_add_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	set_bit(ctx->sa.assoc_num,
 		&hw->macsec_cfg.atl_rxsc[rxsc_idx].rx_sa_idx_busy);
@@ -1237,8 +1261,10 @@ static int atl_mdo_upd_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
 		return atl_update_rxsa(
@@ -1287,8 +1313,10 @@ static int atl_mdo_del_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	return atl_clear_rxsa(nic, &nic->hw.macsec_cfg.atl_rxsc[rxsc_idx],
 			      ctx->sa.assoc_num, ATL_CLEAR_ALL);
@@ -1300,8 +1328,10 @@ static int atl_mdo_get_dev_stats(struct macsec_context *ctx)
 	struct atl_hw *hw = &nic->hw;
 	struct atl_macsec_common_stats *stats = &hw->macsec_cfg.stats;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_get_macsec_common_stats(hw, stats);
 
@@ -1329,8 +1359,10 @@ static int atl_mdo_get_tx_sc_stats(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -ENOENT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	stats = &atl_txsc->stats;
@@ -1361,8 +1393,10 @@ static int atl_mdo_get_tx_sa_stats(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	sa_idx = atl_txsc->hw_sc_idx | ctx->sa.assoc_num;
@@ -1401,8 +1435,10 @@ static int atl_mdo_get_rx_sc_stats(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_rxsc = &hw->macsec_cfg.atl_rxsc[rxsc_idx];
 	for (i = 0; i < MACSEC_NUM_AN; i++) {
@@ -1449,8 +1485,10 @@ static int atl_mdo_get_rx_sa_stats(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
 	if (ctx->prepare)
 		return 0;
+#endif
 
 	atl_rxsc = &hw->macsec_cfg.atl_rxsc[rxsc_idx];
 	stats = &atl_rxsc->rx_sa_stats[ctx->sa.assoc_num];

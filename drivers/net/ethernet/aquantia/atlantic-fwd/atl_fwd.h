@@ -442,4 +442,6 @@ int atl_get_ext_stats(struct net_device *ndev, struct atl_ext_stats *stats);
  */
 int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump);
 
+int atl_fwd_reconfigure_rings(struct atl_nic *nic);
+
 #endif

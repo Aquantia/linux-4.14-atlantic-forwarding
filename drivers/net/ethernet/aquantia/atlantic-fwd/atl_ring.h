@@ -199,6 +199,11 @@ int atl_clean_rx(struct atl_desc_ring *ring, int budget,
 int atl_clean_hwts_rx(struct atl_desc_ring *ring, int budget);
 void atl_clear_rx_bufs(struct atl_desc_ring *ring);
 
+bool atl_rx_checksum(struct sk_buff *skb, struct atl_rx_desc_wb *desc,
+		 struct atl_desc_ring *ring);
+void atl_rx_hash(struct sk_buff *skb, struct atl_rx_desc_wb *desc,
+		 struct net_device *ndev);
+
 #ifdef ATL_RINGS_IN_UC_MEM
 
 #define DECLARE_SCRATCH_DESC(_name) union atl_desc _name

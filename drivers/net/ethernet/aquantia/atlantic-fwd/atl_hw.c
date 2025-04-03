@@ -12,6 +12,7 @@
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 
+#include "atl_mdio.h"
 #include "atl_common.h"
 #include "atl_hw.h"
 #include "atl_ptp.h"

@@ -23,7 +23,7 @@ static ssize_t atl_hwmon_set_flag(struct device *dev,
 	bool val;
 	int ret;
 
-	if (strtobool(buf, &val) < 0)
+	if (kstrtobool(buf, &val) < 0)
 		return -EINVAL;
 
 	ret = atl_update_thermal_flag(hw, sattr->index, val);
