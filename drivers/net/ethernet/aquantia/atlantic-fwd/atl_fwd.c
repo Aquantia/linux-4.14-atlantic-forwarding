@@ -622,9 +622,14 @@ static void __iomem *atl_msix_bar(struct atl_nic *nic)
 	if (!pdev->msix_enabled)
 		return NULL;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5,15,0)
+	msi = msi_first_desc(&pdev->dev, MSI_DESC_ALL);
+	return msi->pci.mask_base;
+#else
 	msi = list_first_entry(dev_to_msi_list(&pdev->dev),
-		struct msi_desc, list);
+	struct msi_desc, list);
 	return msi->mask_base;
+#endif
 }
 
 static int atl_fwd_set_msix_vec(struct atl_nic *nic, struct atl_fwd_event *evt)

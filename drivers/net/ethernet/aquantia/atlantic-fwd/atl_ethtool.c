@@ -321,12 +321,30 @@ static uint32_t atl_rss_key_size(struct net_device *ndev)
 	return ATL_RSS_KEY_SIZE;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+static int atl_rss_get_rxfh(struct net_device *ndev, 
+	struct ethtool_rxfh_param *rxfh)
+#else
 static int atl_rss_get_rxfh(struct net_device *ndev, uint32_t *tbl,
 	uint8_t *key, uint8_t *htype)
+#endif
 {
 	struct atl_hw *hw = &((struct atl_nic *)netdev_priv(ndev))->hw;
 	int i;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+	if (rxfh->hfunc)
+		rxfh->hfunc = ETH_RSS_HASH_TOP;
+
+	if (rxfh->key)
+        memcpy(rxfh->key, hw->rss_key, atl_rss_key_size(ndev));
+
+	if (rxfh->indir) {
+        for (i = 0; i < atl_rss_tbl_size(ndev); i++) {
+            rxfh->indir[i] = hw->rss_tbl[i];
+        }
+    }
+#else
 	if (htype)
 		*htype = ETH_RSS_HASH_TOP;
 
@@ -336,21 +354,43 @@ static int atl_rss_get_rxfh(struct net_device *ndev, uint32_t *tbl,
 	if (tbl)
 		for (i = 0; i < atl_rss_tbl_size(ndev); i++)
 			tbl[i] = hw->rss_tbl[i];
-
+#endif
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+static int atl_rss_set_rxfh(struct net_device *ndev, 
+	struct ethtool_rxfh_param *rxfh,
+	struct netlink_ext_ack *extack)
+#else
 static int atl_rss_set_rxfh(struct net_device *ndev, const uint32_t *tbl,
 	const uint8_t *key, const uint8_t htype)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 	struct atl_hw *hw = &nic->hw;
 	int i;
 	uint32_t tbl_size = atl_rss_tbl_size(ndev);
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+	if (rxfh->hfunc && rxfh->hfunc != ETH_RSS_HASH_TOP)
+		return -EINVAL;
+	
+	if (rxfh->indir) {
+        for (i = 0; i < tbl_size; i++) {
+            if (rxfh->indir[i] >= nic->nvecs)
+                return -EINVAL;
+            hw->rss_tbl[i] = rxfh->indir[i];
+        }
+    }
+
+	if (rxfh->key) {
+        memcpy(hw->rss_key, rxfh->key, atl_rss_key_size(ndev));
+        atl_set_rss_key(hw);
+    }
+#else
 	if (htype && htype != ETH_RSS_HASH_TOP)
 		return -EINVAL;
-
 	if (tbl) {
 		for (i = 0; i < tbl_size; i++)
 			if (tbl[i] >= nic->nvecs)
@@ -367,7 +407,7 @@ static int atl_rss_set_rxfh(struct net_device *ndev, const uint32_t *tbl,
 
 	if (tbl)
 		atl_set_rss_tbl(hw);
-
+#endif
 	return 0;
 }
 
@@ -536,8 +576,15 @@ static int atl_nway_reset(struct net_device *ndev)
 	return hw->mcp.ops->restart_aneg(hw);
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
+static void atl_get_ringparam(struct net_device *ndev,
+	struct ethtool_ringparam *rp,
+	struct kernel_ethtool_ringparam *kernel_ring,
+	struct netlink_ext_ack *extack)
+#else
 static void atl_get_ringparam(struct net_device *ndev,
 	struct ethtool_ringparam *rp)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 
@@ -550,8 +597,15 @@ static void atl_get_ringparam(struct net_device *ndev,
 	rp->tx_pending = nic->requested_tx_size;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
+static int atl_set_ringparam(struct net_device *ndev,
+	struct ethtool_ringparam *rp,
+	struct kernel_ethtool_ringparam *kernel_ring,
+	struct netlink_ext_ack *extack)
+#else
 static int atl_set_ringparam(struct net_device *ndev,
 	struct ethtool_ringparam *rp)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 

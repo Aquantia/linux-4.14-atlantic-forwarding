@@ -1444,7 +1444,7 @@ void atl_init_qvec(struct atl_nic *nic, struct atl_queue_vec *qvec, int idx)
 	u64_stats_init(&qvec->tx.syncp);
 
 	if (likely(qvec->type == ATL_QUEUE_REGULAR))
-		netif_napi_add(nic->ndev, &qvec->napi, atl_poll, 64);
+		aq_netif_napi_add(nic->ndev, &qvec->napi, atl_poll, 64);
 }
 
 int atl_setup_datapath(struct atl_nic *nic)
@@ -2141,9 +2141,19 @@ void atl_get_ring_stats(struct atl_desc_ring *ring,
 	unsigned int start;
 
 	do {
-		start = u64_stats_fetch_begin_irq(&ring->syncp);
+		#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 16))
+			start = u64_stats_fetch_begin(&ring->syncp);
+		#else
+			start = u64_stats_fetch_begin_irq(&ring->syncp);
+		#endif
 		memcpy(stats, &ring->stats, sizeof(*stats));
-	} while (u64_stats_fetch_retry_irq(&ring->syncp, start));
+	} while (
+		#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 16))
+			u64_stats_fetch_retry(&ring->syncp, start)
+		#else
+			u64_stats_fetch_retry_irq(&ring->syncp, start)
+		#endif
+	);
 }
 
 #define atl_add_stats(_dst, _src)				\
