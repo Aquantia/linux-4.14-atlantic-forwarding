@@ -1195,7 +1195,12 @@ static int request_ring(struct net_device *ndev, struct genl_info *info)
 		goto err_relring;
 
 	u64_stats_init(&ring_desc->syncp);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+	memset(&ring_desc->stats.rxtx, 0, sizeof(ring_desc->stats.rxtx));
+#else
 	memset(&ring_desc->stats, 0, sizeof(ring_desc->stats));
+#endif
 
 	return atlfwd_nl_send_reply(info, ATL_FWD_ATTR_RING_INDEX, ring_index);
 
@@ -1663,12 +1668,12 @@ static int doit_get_queue(struct sk_buff *skb, struct genl_info *info)
  *
  * Returns 0 on success, error otherwise.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 static int atlfwd_nl_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
-                    struct genl_info *info)
+				struct genl_info *info)
 #else
 static int atlfwd_nl_pre_doit(const struct genl_ops *ops, struct sk_buff *skb,
-			      	struct genl_info *info)
+				struct genl_info *info)
 #endif
 {
 	enum atlfwd_nl_attribute missing_attr = ATL_FWD_ATTR_INVALID;

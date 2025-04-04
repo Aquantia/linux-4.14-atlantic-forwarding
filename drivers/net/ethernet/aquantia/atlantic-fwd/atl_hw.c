@@ -83,6 +83,11 @@ err_exit:
 	return ret;
 }
 
+/* Enable/Disable auto TX LPI */
+void atl_set_tx_auto_lpi(struct atl_hw *hw, bool tx_lpi)
+{
+	atl_write_bit(hw, ATL_MPI_MSM_TX_AUTO_LPI_EN, 0xA, tx_lpi);
+}
 
 static inline void atl_glb_soft_reset(struct atl_hw *hw)
 {
@@ -1444,10 +1449,14 @@ int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay)
 	uint32_t lpi;
 	int ret = 0;
 
+	if (hw->chip_id == ATL_ANTIGUA) {
+		lpi = atl_read(hw, ATL_MPI_MSM_TX_LPI_TIMER) & 0x7FFFF;
+	} else {
+		ret = atl_msm_read(hw, ATL_MSM_TX_LPI_DELAY, &lpi);
+		if (ret)
+			return ret;
+	}
 
-	ret = atl_msm_read(hw, ATL_MSM_TX_LPI_DELAY, &lpi);
-	if (ret)
-		return ret;
 	*lpi_delay = ATL_HW_CLOCK_TO_US(lpi);
 
 	return ret;

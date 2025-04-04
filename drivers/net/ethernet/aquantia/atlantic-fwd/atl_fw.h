@@ -178,6 +178,7 @@ struct atl_link_state{
 	bool thermal_throttled;
 	bool autoneg;
 	bool eee;
+	bool tx_lpi_enabled;
 	bool eee_enabled;
 	bool ptp_available;
 	bool ptp_datapath_up;
