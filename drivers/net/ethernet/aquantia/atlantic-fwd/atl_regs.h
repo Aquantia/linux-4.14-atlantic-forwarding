@@ -100,6 +100,8 @@ enum mcp_scratchpad {
 #define ATL_MPI_MSM_ADDR 0x4400
 #define ATL_MPI_MSM_WR 0x4404
 #define ATL_MPI_MSM_RD 0x4408
+#define ATL_MPI_MSM_TX_LPI_TIMER 0x4560
+#define ATL_MPI_MSM_TX_AUTO_LPI_EN 0x4500
 
 /* RX @ 0x5000 */
 #define ATL_RX_CTRL1 0x5000

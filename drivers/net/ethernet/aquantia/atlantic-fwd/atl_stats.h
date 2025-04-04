@@ -13,6 +13,9 @@
 #define _ATL_STATS_H_
 
 #include <linux/types.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#include <linux/stddef.h>
+#endif
 
 struct atl_rx_ring_stats {
 	uint64_t packets;
@@ -44,12 +47,23 @@ struct atl_tx_ring_stats {
 	uint64_t dma_map_failed;
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+struct atl_ring_stats {
+	union {
+		struct_group(rxtx,
+			struct atl_rx_ring_stats rx;
+			struct atl_tx_ring_stats tx;
+		);
+	};
+};
+#else
 struct atl_ring_stats {
 	union {
 		struct atl_rx_ring_stats rx;
 		struct atl_tx_ring_stats tx;
 	};
 };
+#endif
 
 struct atl_ether_stats {
 	uint64_t tx_pause;

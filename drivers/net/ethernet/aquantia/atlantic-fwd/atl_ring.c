@@ -1323,7 +1323,12 @@ static int atl_config_interrupts(struct atl_nic *nic)
 
 	atl_nic_warn("Couldn't allocate MSI-X / MSI vectors, falling back to legacy interrupts\n");
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+	flags = PCI_IRQ_INTX;
+#else
 	flags = PCI_IRQ_LEGACY;
+#endif
+
 	ret = pci_alloc_irq_vectors(hw->pdev, 1, 1, flags);
 	if (ret < 0) {
 		atl_nic_err("Couldn't allocate legacy IRQ\n");
