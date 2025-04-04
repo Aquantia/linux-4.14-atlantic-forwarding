@@ -515,8 +515,4 @@ static inline int dma_set_mask_and_coherent(struct device *dev, u64 mask)
 #define aq_netif_napi_add(dev, napi, poll, weight) netif_napi_add(dev, napi, poll, weight)
 #endif
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4,3,8))
-#define strlcpy(dest, src, count) strscpy((dest), (src), (count))
-#endif
-
 #endif
