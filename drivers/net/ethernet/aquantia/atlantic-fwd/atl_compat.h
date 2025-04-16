@@ -507,4 +507,12 @@ static inline int dma_set_mask_and_coherent(struct device *dev, u64 mask)
 
 #endif /* RHEL_RELEASE_CODE < 7.2 */
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 0, 19)) || \
+	(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(9, 1)) || \
+	(RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 8))
+#define aq_netif_napi_add(dev, napi, poll, weight) netif_napi_add(dev, napi, poll)
+#else
+#define aq_netif_napi_add(dev, napi, poll, weight) netif_napi_add(dev, napi, poll, weight)
+#endif
+
 #endif

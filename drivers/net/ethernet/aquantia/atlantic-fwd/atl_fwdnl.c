@@ -152,9 +152,19 @@ void atl_fwd_get_ring_stats(struct atl_fwd_ring *ring,
 		unsigned int start;
 
 		do {
-			start = u64_stats_fetch_begin_irq(&desc->syncp);
+			#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 16))
+				start = u64_stats_fetch_begin(&desc->syncp);
+			#else
+				start = u64_stats_fetch_begin_irq(&desc->syncp);
+			#endif
 			memcpy(stats, &desc->stats, sizeof(*stats));
-		} while (u64_stats_fetch_retry_irq(&desc->syncp, start));
+		} while (
+			#if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 2, 16))
+				u64_stats_fetch_retry(&desc->syncp, start)
+			#else
+				u64_stats_fetch_retry_irq(&desc->syncp, start)
+			#endif
+		);
 	} else {
 		memset(stats, 0, sizeof(*stats));
 	}
@@ -1185,7 +1195,12 @@ static int request_ring(struct net_device *ndev, struct genl_info *info)
 		goto err_relring;
 
 	u64_stats_init(&ring_desc->syncp);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+	memset(&ring_desc->stats.rxtx, 0, sizeof(ring_desc->stats.rxtx));
+#else
 	memset(&ring_desc->stats, 0, sizeof(ring_desc->stats));
+#endif
 
 	return atlfwd_nl_send_reply(info, ATL_FWD_ATTR_RING_INDEX, ring_index);
 
@@ -1653,8 +1668,13 @@ static int doit_get_queue(struct sk_buff *skb, struct genl_info *info)
  *
  * Returns 0 on success, error otherwise.
  */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
+static int atlfwd_nl_pre_doit(const struct genl_split_ops *ops, struct sk_buff *skb,
+				struct genl_info *info)
+#else
 static int atlfwd_nl_pre_doit(const struct genl_ops *ops, struct sk_buff *skb,
-			      struct genl_info *info)
+				struct genl_info *info)
+#endif
 {
 	enum atlfwd_nl_attribute missing_attr = ATL_FWD_ATTR_INVALID;
 	int ring_index = S32_MIN;

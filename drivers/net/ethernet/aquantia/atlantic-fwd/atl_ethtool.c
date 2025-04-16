@@ -321,12 +321,29 @@ static uint32_t atl_rss_key_size(struct net_device *ndev)
 	return ATL_RSS_KEY_SIZE;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+static int atl_rss_get_rxfh(struct net_device *ndev,
+	struct ethtool_rxfh_param *rxfh)
+#else
 static int atl_rss_get_rxfh(struct net_device *ndev, uint32_t *tbl,
 	uint8_t *key, uint8_t *htype)
+#endif
 {
 	struct atl_hw *hw = &((struct atl_nic *)netdev_priv(ndev))->hw;
 	int i;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+	if (rxfh->hfunc)
+		rxfh->hfunc = ETH_RSS_HASH_TOP;
+
+	if (rxfh->key)
+		memcpy(rxfh->key, hw->rss_key, atl_rss_key_size(ndev));
+
+	if (rxfh->indir) {
+		for (i = 0; i < atl_rss_tbl_size(ndev); i++)
+			rxfh->indir[i] = hw->rss_tbl[i];
+	}
+#else
 	if (htype)
 		*htype = ETH_RSS_HASH_TOP;
 
@@ -336,21 +353,43 @@ static int atl_rss_get_rxfh(struct net_device *ndev, uint32_t *tbl,
 	if (tbl)
 		for (i = 0; i < atl_rss_tbl_size(ndev); i++)
 			tbl[i] = hw->rss_tbl[i];
-
+#endif
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+static int atl_rss_set_rxfh(struct net_device *ndev,
+	struct ethtool_rxfh_param *rxfh,
+	struct netlink_ext_ack *extack)
+#else
 static int atl_rss_set_rxfh(struct net_device *ndev, const uint32_t *tbl,
 	const uint8_t *key, const uint8_t htype)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 	struct atl_hw *hw = &nic->hw;
 	int i;
 	uint32_t tbl_size = atl_rss_tbl_size(ndev);
 
-	if (htype && htype != ETH_RSS_HASH_TOP)
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 12)
+	if (rxfh->hfunc && rxfh->hfunc != ETH_RSS_HASH_TOP)
 		return -EINVAL;
 
+	if (rxfh->indir) {
+		for (i = 0; i < tbl_size; i++) {
+			if (rxfh->indir[i] >= nic->nvecs)
+				return -EINVAL;
+			hw->rss_tbl[i] = rxfh->indir[i];
+		}
+	}
+
+	if (rxfh->key) {
+		memcpy(hw->rss_key, rxfh->key, atl_rss_key_size(ndev));
+		atl_set_rss_key(hw);
+	}
+#else
+	if (htype && htype != ETH_RSS_HASH_TOP)
+		return -EINVAL;
 	if (tbl) {
 		for (i = 0; i < tbl_size; i++)
 			if (tbl[i] >= nic->nvecs)
@@ -367,7 +406,7 @@ static int atl_rss_set_rxfh(struct net_device *ndev, const uint32_t *tbl,
 
 	if (tbl)
 		atl_set_rss_tbl(hw);
-
+#endif
 	return 0;
 }
 
@@ -447,6 +486,34 @@ static int atl_set_pauseparam(struct net_device *ndev,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 8, 12)
+static int atl_get_eee(struct net_device *ndev, struct ethtool_keee *eee)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+	struct atl_link_state *lstate = &nic->hw.link_state;
+	int ret = 0;
+
+	/* Casting to unsigned long is safe, as atl_link_to_kernel()
+	 * will only access low 32 bits when called with legacy == true
+	 */
+	atl_link_to_kernel(lstate->supported >> ATL_EEE_BIT_OFFT,
+		(unsigned long *)&eee->supported, true);
+	atl_link_to_kernel(lstate->advertized >> ATL_EEE_BIT_OFFT,
+		(unsigned long *)&eee->advertised, true);
+	atl_link_to_kernel(lstate->lp_advertized >> ATL_EEE_BIT_OFFT,
+		(unsigned long *)&eee->lp_advertised, true);
+
+	eee->eee_enabled = eee->tx_lpi_enabled = lstate->eee_enabled;
+	eee->eee_active = lstate->eee;
+
+	ret = atl_get_lpi_timer(nic, &nic->hw.lpi_timer);
+	if (ret == -ENODATA)
+		ret = 0;
+
+	eee->tx_lpi_timer = nic->hw.lpi_timer;
+	return ret;
+}
+#else
 static int atl_get_eee(struct net_device *ndev, struct ethtool_eee *eee)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
@@ -475,7 +542,51 @@ static int atl_get_eee(struct net_device *ndev, struct ethtool_eee *eee)
 	eee->tx_lpi_timer = nic->hw.lpi_timer;
 	return ret;
 }
+#endif
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 8, 12)
+static int atl_set_eee(struct net_device *ndev, struct ethtool_keee *eee)
+{
+	struct atl_nic *nic = netdev_priv(ndev);
+	struct atl_hw *hw = &nic->hw;
+	struct atl_link_state *lstate = &hw->link_state;
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(link_modes);
+	unsigned long tmp = 0;
+
+	if ((hw->chip_id == ATL_ATLANTIC) && (atl_fw_major(hw) < 2))
+		return -EOPNOTSUPP;
+
+	if (eee->tx_lpi_timer != nic->hw.lpi_timer)
+		return -EOPNOTSUPP;
+
+	lstate->eee_enabled = eee->eee_enabled;
+
+	if (lstate->tx_lpi_enabled != eee->tx_lpi_enabled) {
+		lstate->tx_lpi_enabled = eee->tx_lpi_enabled;
+		atl_set_tx_auto_lpi(hw, lstate->tx_lpi_enabled);
+	}
+
+	if (lstate->eee_enabled) {
+		atl_link_to_kernel(lstate->supported >> ATL_EEE_BIT_OFFT,
+				   link_modes, false);
+		if (eee->advertised[0] & ~link_modes[0])
+			return -EINVAL;
+
+		/* advertize the requested link or all supported */
+		if (eee->advertised[0])
+			ethtool_convert_legacy_u32_to_link_mode(link_modes,
+								eee->advertised[0]);
+		tmp = atl_kernel_to_link(link_modes, false);
+	}
+
+	lstate->advertized &= ~ATL_EEE_MASK;
+	if (lstate->eee_enabled)
+		lstate->advertized |= tmp << ATL_EEE_BIT_OFFT;
+
+	hw->mcp.ops->set_link(hw, false);
+	return 0;
+}
+#else
 static int atl_set_eee(struct net_device *ndev, struct ethtool_eee *eee)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
@@ -491,6 +602,11 @@ static int atl_set_eee(struct net_device *ndev, struct ethtool_eee *eee)
 		return -EOPNOTSUPP;
 
 	lstate->eee_enabled = eee->eee_enabled;
+
+	if (lstate->tx_lpi_enabled != eee->tx_lpi_enabled) {
+		lstate->tx_lpi_enabled = eee->tx_lpi_enabled;
+		atl_set_tx_auto_lpi(hw, lstate->tx_lpi_enabled);
+	}
 
 	if (lstate->eee_enabled) {
 		atl_link_to_kernel(lstate->supported >> ATL_EEE_BIT_OFFT,
@@ -512,6 +628,7 @@ static int atl_set_eee(struct net_device *ndev, struct ethtool_eee *eee)
 	hw->mcp.ops->set_link(hw, false);
 	return 0;
 }
+#endif
 
 static void atl_get_drvinfo(struct net_device *ndev,
 	struct ethtool_drvinfo *drvinfo)
@@ -519,13 +636,24 @@ static void atl_get_drvinfo(struct net_device *ndev,
 	struct atl_nic *nic = netdev_priv(ndev);
 	uint32_t fw_rev = nic->hw.mcp.fw_rev;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 8)
+	strscpy(drvinfo->driver, atl_driver_name, sizeof(drvinfo->driver));
+	strscpy(drvinfo->version, ATL_VERSION, sizeof(drvinfo->version));
+#else
 	strlcpy(drvinfo->driver, atl_driver_name, sizeof(drvinfo->driver));
 	strlcpy(drvinfo->version, ATL_VERSION, sizeof(drvinfo->version));
+#endif
 	snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version),
 		"%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff,
 		fw_rev & 0xffff);
+
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 8)
+	strscpy(drvinfo->bus_info, pci_name(nic->hw.pdev),
+		sizeof(drvinfo->bus_info));
+#else
 	strlcpy(drvinfo->bus_info, pci_name(nic->hw.pdev),
 		sizeof(drvinfo->bus_info));
+#endif
 }
 
 static int atl_nway_reset(struct net_device *ndev)
@@ -536,8 +664,15 @@ static int atl_nway_reset(struct net_device *ndev)
 	return hw->mcp.ops->restart_aneg(hw);
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
+static void atl_get_ringparam(struct net_device *ndev,
+	struct ethtool_ringparam *rp,
+	struct kernel_ethtool_ringparam *kernel_ring,
+	struct netlink_ext_ack *extack)
+#else
 static void atl_get_ringparam(struct net_device *ndev,
 	struct ethtool_ringparam *rp)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 
@@ -550,8 +685,15 @@ static void atl_get_ringparam(struct net_device *ndev,
 	rp->tx_pending = nic->requested_tx_size;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
+static int atl_set_ringparam(struct net_device *ndev,
+	struct ethtool_ringparam *rp,
+	struct kernel_ethtool_ringparam *kernel_ring,
+	struct netlink_ext_ack *extack)
+#else
 static int atl_set_ringparam(struct net_device *ndev,
 	struct ethtool_ringparam *rp)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 
@@ -1236,8 +1378,13 @@ static int atl_set_coalesce(struct net_device *ndev,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
 static int atl_get_ts_info(struct net_device *ndev,
-			   struct ethtool_ts_info *info)
+		struct kernel_ethtool_ts_info *info)
+#else
+static int atl_get_ts_info(struct net_device *ndev,
+		struct ethtool_ts_info *info)
+#endif
 {
 	struct atl_nic *nic = netdev_priv(ndev);
 	struct ptp_clock *ptp_clock;

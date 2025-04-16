@@ -284,6 +284,7 @@ static int atl_ptp_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 /* atl_ptp_adjfreq
  * @ptp_info: the ptp clock structure
  * @ppb: parts per billion adjustment from base
@@ -300,6 +301,7 @@ static int atl_ptp_adjfreq(struct ptp_clock_info *ptp_info, s32 ppb)
 
 	return 0;
 }
+#endif
 
 /* atl_ptp_adjtime
  * @ptp_info: the ptp clock structure
@@ -622,7 +624,9 @@ static struct ptp_clock_info atl_ptp_clock = {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
 	.adjfine	= atl_ptp_adjfine,
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 	.adjfreq	= atl_ptp_adjfreq,
+#endif
 	.adjtime	= atl_ptp_adjtime,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)
 	.gettime64	= atl_ptp_gettime,
@@ -1153,7 +1157,7 @@ int atl_ptp_ring_start(struct atl_nic *nic)
 			goto stop;
 	}
 
-	netif_napi_add(nic->ndev, ptp->napi, atl_ptp_poll, 64);
+	aq_netif_napi_add(nic->ndev, ptp->napi, atl_ptp_poll, 64);
 	napi_enable(ptp->napi);
 
 	return 0;

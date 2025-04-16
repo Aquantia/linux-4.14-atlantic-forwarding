@@ -333,6 +333,10 @@ int atl_alloc_link_intr(struct atl_nic *nic);
 void atl_free_link_intr(struct atl_nic *nic);
 int atl_write_mcp_mem(struct atl_hw *hw, uint32_t offt, void *addr,
 	size_t size, enum mcp_area area);
+int atl_write_mcp_mem_b1(struct atl_hw *hw, uint32_t offt, void *host_addr,
+	size_t size, enum mcp_area area);
+int atl_write_mcp_mem_b0(struct atl_hw *hw, uint32_t offt, void *host_addr,
+	size_t size, enum mcp_area area);
 
 static inline int atl_write_fwcfg_word(struct atl_hw *hw, uint32_t offt,
 	uint32_t val)
@@ -378,5 +382,6 @@ static inline void atl_unlock_fw(struct atl_hw *hw)
 }
 
 void atl_fw_watchdog(struct atl_hw *hw);
+void atl_set_tx_auto_lpi(struct atl_hw *hw, bool tx_lpi);
 
 #endif

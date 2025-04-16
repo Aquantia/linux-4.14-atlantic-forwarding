@@ -12,6 +12,7 @@
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 
+#include "atl_mdio.h"
 #include "atl_common.h"
 #include "atl_hw.h"
 #include "atl_ptp.h"
@@ -82,6 +83,11 @@ err_exit:
 	return ret;
 }
 
+/* Enable/Disable auto TX LPI */
+void atl_set_tx_auto_lpi(struct atl_hw *hw, bool tx_lpi)
+{
+	atl_write_bit(hw, ATL_MPI_MSM_TX_AUTO_LPI_EN, 0xA, tx_lpi);
+}
 
 static inline void atl_glb_soft_reset(struct atl_hw *hw)
 {
@@ -140,6 +146,7 @@ static inline void atl_enable_dma_net_lpb_mode(struct atl_nic *nic)
 	atl_write_bit(hw, ATL_TX_PBUF_CTRL1, 4, 0);
 	atl_write_bit(hw, ATL_TX_CTRL1, 4, 1);
 	atl_write_bit(hw, ATL_RX_CTRL1, 4, 1);
+
 }
 /* entered with fw lock held */
 static int atl_hw_reset_nonrbl(struct atl_hw *hw)
@@ -1442,10 +1449,14 @@ int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay)
 	uint32_t lpi;
 	int ret = 0;
 
+	if (hw->chip_id == ATL_ANTIGUA) {
+		lpi = atl_read(hw, ATL_MPI_MSM_TX_LPI_TIMER) & 0x7FFFF;
+	} else {
+		ret = atl_msm_read(hw, ATL_MSM_TX_LPI_DELAY, &lpi);
+		if (ret)
+			return ret;
+	}
 
-	ret = atl_msm_read(hw, ATL_MSM_TX_LPI_DELAY, &lpi);
-	if (ret)
-		return ret;
 	*lpi_delay = ATL_HW_CLOCK_TO_US(lpi);
 
 	return ret;

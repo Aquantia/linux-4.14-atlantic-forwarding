@@ -282,7 +282,7 @@ static int atl_set_mac_address(struct net_device *ndev, void *priv)
 		return -EADDRNOTAVAIL;
 
 	ether_addr_copy(hw->mac_addr, addr->sa_data);
-	ether_addr_copy(ndev->dev_addr, addr->sa_data);
+	ether_addr_copy((u8 *) ndev->dev_addr, addr->sa_data);
 
 	if (netif_running(ndev) && pm_runtime_active(&nic->hw.pdev->dev))
 		atl_set_uc_flt(hw, nic->rxf_mac.base_index, hw->mac_addr);
@@ -623,7 +623,7 @@ static int atl_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		/* goto err_hwinit; */
 	}
 
-	ether_addr_copy(ndev->dev_addr, hw->mac_addr);
+	ether_addr_copy((u8 *) ndev->dev_addr, hw->mac_addr);
 	atl_dev_dbg("got MAC address: %pM\n", hw->mac_addr);
 
 	ret = atl_ptp_init(nic);

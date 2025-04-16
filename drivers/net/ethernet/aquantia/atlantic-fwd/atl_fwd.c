@@ -622,9 +622,14 @@ static void __iomem *atl_msix_bar(struct atl_nic *nic)
 	if (!pdev->msix_enabled)
 		return NULL;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
+	msi = msi_first_desc(&pdev->dev, MSI_DESC_ALL);
+	return msi->pci.mask_base;
+#else
 	msi = list_first_entry(dev_to_msi_list(&pdev->dev),
-		struct msi_desc, list);
+	struct msi_desc, list);
 	return msi->mask_base;
+#endif
 }
 
 static int atl_fwd_set_msix_vec(struct atl_nic *nic, struct atl_fwd_event *evt)
@@ -1081,7 +1086,12 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 	crash_dump->length = sizeof(*crash_dump);
 	crash_dump->sections_count = 0;
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 8)
+	strscpy(crash_dump->drv_version, ATL_VERSION, sizeof(crash_dump->drv_version));
+#else
 	strlcpy(crash_dump->drv_version, ATL_VERSION, sizeof(crash_dump->drv_version));
+#endif
+
 	snprintf(crash_dump->fw_version, sizeof(crash_dump->fw_version),
 		"%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff, fw_rev & 0xffff);
 
