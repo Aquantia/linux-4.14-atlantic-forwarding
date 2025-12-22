@@ -12,95 +12,90 @@
 #ifndef _ATL_DRVIFACE_H_
 #define _ATL_DRVIFACE_H_
 
-typedef uint16_t in_port_t;
-typedef uint32_t in_addr_t;
+/* These structures define the driver interface for Atlantic network hardware */
 
-struct __attribute__((packed)) offloadKAv4 {
-    uint32_t timeout;
-    in_port_t local_port;
-    in_port_t remote_port;
-    uint8_t remote_mac_addr[6];
-    uint16_t win_size;
-    uint32_t seq_num;
-    uint32_t ack_num;
-    in_addr_t local_ip;
-    in_addr_t remote_ip;
+typedef u16 in_port_t;
+typedef u32 in_addr_t;
+
+struct offload_ka_v4 {
+	u32 timeout;
+	in_port_t local_port;
+	in_port_t remote_port;
+	u8 remote_mac_addr[6];
+	u16 win_size;
+	u32 seq_num;
+	u32 ack_num;
+	in_addr_t local_ip;
+	in_addr_t remote_ip;
+} __packed;
+
+struct offload_ka_v6 {
+	u32 timeout;
+	in_port_t local_port;
+	in_port_t remote_port;
+	u8 remote_mac_addr[6];
+	u16 win_size;
+	u32 seq_num;
+	u32 ack_num;
+	struct in6_addr local_ip;
+	struct in6_addr remote_ip;
+} __packed;
+
+struct offload_ip_info {
+	u8 v4_local_addr_count;
+	u8 v4_addr_count;
+	u8 v6_local_addr_count;
+	u8 v6_addr_count;
+	u32 v4_addr_offt;
+	// u8 *
+	u32 v4_prefix_offt;
+	// in6_addr *
+	u32 v6_addr_offt;
+	// u8 *
+	u32 v6_prefix_offt;
+} __packed;
+
+struct offload_port_info {
+	u16 udp_port_count;
+	u16 tcp_port_count;
+	// in_port_t *
+	// See the comment in the offload_ip_info struct
+	u32 udp_port_offt;
+	// in_port_t *
+	u32 tcp_port_offt;
+} __packed;
+
+struct offload_ka_info {
+	u16 v4_ka_count;
+	u16 v6_ka_count;
+	u32 retry_count;
+	u32 retry_interval;
+	// struct offload_ka_v4 *
+	// See the comment in the offload_ip_info struct
+	u32 v4_ka_offt;
+	// struct offload_ka_v6 *
+	u32 v6_ka_offt;
+} __packed;
+
+struct offload_rr_info {
+	u32 rr_count;
+	u32 rr_buf_len;
+	u32 rr_idx_offt;
+	u32 rr_buf_offt;
 };
 
-struct __attribute__((packed)) offloadKAv6 {
-    uint32_t timeout;
-    in_port_t local_port;
-    in_port_t remote_port;
-    uint8_t remote_mac_addr[6];
-    uint16_t win_size;
-    uint32_t seq_num;
-    uint32_t ack_num;
-    struct in6_addr local_ip;
-    struct in6_addr remote_ip;
-};
+struct offload_info {
+	u32 version;               // = 0 till it stabilizes some
+	u32 len;                   // The whole structure length including the variable-size buf
+	u8 mac_addr[8];
+	struct offload_ip_info ips;
+	struct offload_port_info ports;
+	struct offload_ka_info kas;
+	struct offload_rr_info rrs;
+	u8 buf[];
+} __packed;
 
-struct __attribute__((packed)) offloadIPInfo {
-    uint8_t v4LocalAddrCount;
-    uint8_t v4AddrCount;
-    uint8_t v6LocalAddrCount;
-    uint8_t v6AddrCount;
-    // FW will add the base to the following offset fields and will treat them as pointers.
-    // The offsets are relative to the start of this struct so that the struct is pretty much self-contained
-    // in_addr_t *
-    uint32_t v4AddrOfft;
-    // uint8_t *
-    uint32_t v4PrefixOfft;
-    // in6_addr *
-    uint32_t v6AddrOfft;
-    // uint8_t *
-    uint32_t v6PrefixOfft;
-};
-
-struct __attribute__((packed)) offloadPortInfo {
-    uint16_t UDPPortCount;
-    uint16_t TCPPortCount;
-    // in_port_t *
-    uint32_t UDPPortOfft;       // See the comment in the offloadIPInfo struct
-                                // in_port_t *
-    uint32_t TCPPortOfft;
-};
-
-struct __attribute__((packed))  offloadKAInfo {
-    uint16_t v4KACount;
-    uint16_t v6KACount;
-    uint32_t retryCount;
-    uint32_t retryInterval;
-    // struct offloadKAv4 *
-    uint32_t v4KAOfft;          // See the comment in the offloadIPInfo struct
-                                // struct offloadKAv6 *
-    uint32_t v6KAOfft;
-};
-
-struct  __attribute__((packed)) offloadRRInfo {
-    uint32_t RRCount;
-    uint32_t RRBufLen;
-    // Offset to RR index table relative to the start of offloadRRInfo struct. The indices
-    // themselves are relative to the start of RR buffer. FW will add the buffer address
-    // and will treat them as pointers.
-    // uint8_t **
-    uint32_t RRIdxOfft;
-    // Offset to the RR buffer relative to the start of offloadRRInfo struct.
-    // uint8_t *
-    uint32_t RRBufOfft;
-};
-
-struct __attribute__((packed)) offloadInfo {
-    uint32_t version;               // = 0 till it stabilizes some
-    uint32_t len;                   // The whole structure length including the variable-size buf
-    uint8_t macAddr[8];
-    struct offloadIPInfo ips;
-    struct offloadPortInfo ports;
-    struct offloadKAInfo kas;
-    struct offloadRRInfo rrs;
-    uint8_t buf[0];
-};
-
-#define FW_PACK_STRUCT __attribute__((packed))
+#define FW_PACK_STRUCT __packed
 
 #define DRV_REQUEST_SIZE 3072
 #define DRV_MSG_PING            0x01
@@ -112,7 +107,7 @@ struct __attribute__((packed)) offloadInfo {
 #define DRV_MSG_MSM             0x07
 #define DRV_MSG_PROVISIONING    0x08
 #define DRV_MSG_OFFLOAD_ADD     0x09
-#define DRV_MSG_OFFLOAD_REMOVE 	0x0A
+#define DRV_MSG_OFFLOAD_REMOVE	0x0A
 #define DRV_MSG_MSM_EX          0x0B
 #define DRV_MSG_SMBUS_PROXY     0x0C
 
@@ -122,9 +117,9 @@ struct __attribute__((packed)) offloadInfo {
 
 #define FW_RPC_INJECT_PACKET_LEN 1514U
 
-typedef enum {
-    EVENT_DRIVER_ENABLE_WOL
-} eDriverEvent;
+enum driver_event {
+	EVENT_DRIVER_ENABLE_WOL
+};
 
 //typedef enum {
 //    HOST_UNINIT = 0,
@@ -135,262 +130,260 @@ typedef enum {
 //    HOST_INVALID
 //} hostState_t;
 
-struct drvMsgPing {
-    uint32_t ping;
+struct drv_msg_ping {
+	u32 ping;
 } FW_PACK_STRUCT;
 
-union IPAddr {
-    struct
-    {
-        uint8_t addr[16];
-    } FW_PACK_STRUCT v6;
-    struct
-    {
-        uint8_t padding[12];
-        uint8_t addr[4];
-    } FW_PACK_STRUCT v4;
+union ip_addr {
+	struct {
+		u8 addr[16];
+	} FW_PACK_STRUCT v6;
+	struct {
+		u8 padding[12];
+		u8 addr[4];
+	} FW_PACK_STRUCT v4;
 } FW_PACK_STRUCT;
 
-struct drvMsgArp {
-    uint8_t macAddr[6];
-    uint32_t uIpAddrCnt;
-    struct
-    {
-        union IPAddr addr;
-        union IPAddr mask;
-    } FW_PACK_STRUCT ip[1];
+struct drv_msg_arp {
+	u8 mac_addr[6];
+	u32 u_ip_addr_cnt;
+	struct {
+		union ip_addr addr;
+		union ip_addr mask;
+	} FW_PACK_STRUCT ip[1];
 } FW_PACK_STRUCT;
 
-struct drvMsgInject {
-    uint32_t len;
-    uint8_t packet[FW_RPC_INJECT_PACKET_LEN];
+struct drv_msg_inject {
+	u32 len;
+	u8 packet[FW_RPC_INJECT_PACKET_LEN];
 } FW_PACK_STRUCT;
 
-enum ndisPmWoLPacket {
-    ndisPMWoLPacketUnspecified = 0,
-    ndisPMWoLPacketBitmapPattern,
-    ndisPMWoLPacketMagicPacket,
-    ndisPMWoLPacketIPv4TcpSyn,
-    ndisPMWoLPacketIPv6TcpSyn,
-    ndisPMWoLPacketEapolRequestIdMessage,
-    ndisPMWoLPacketMaximum
+enum ndis_pm_wol_packet {
+	NDIS_PM_WOL_PACKET_UNSPECIFIED = 0,
+	NDIS_PM_WOL_PACKET_BITMAP_PATTERN,
+	NDIS_PM_WOL_PACKET_MAGIC_PACKET,
+	NDIS_PM_WOL_PACKET_IPV4_TCP_SYN,
+	NDIS_PM_WOL_PACKET_IPV6_TCP_SYN,
+	NDIS_PM_WOL_PACKET_EAPOL_REQUEST_ID_MESSAGE,
+	NDIS_PM_WOL_PACKET_MAXIMUM
 };
 
-enum aqPmWoLPacket {
-    aqPMWoLPacketUnspecified = 0x10000,
-    aqPMWoLPacketArp,
-    aqPMWoLPacketIPv4Ping,
-    aqPMWoLPacketIpv6NsPacket,
-    aqPMWoLPacketIpv6Ping,
-    aqPMWoLReasonLinkUp,
-    aqPMWoLReasonLinkDown,
-    aqPMWoLPacketMaximum
+enum aq_pm_wol_packet {
+	AQ_PM_WOL_PACKET_UNSPECIFIED = 0x10000,
+	AQ_PM_WOL_PACKET_ARP,
+	AQ_PM_WOL_PACKET_IPV4_PING,
+	AQ_PM_WOL_PACKET_IPV6_NS_PACKET,
+	AQ_PM_WOL_PACKET_IPV6_PING,
+	AQ_PM_WOL_REASON_LINK_UP,
+	AQ_PM_WOL_REASON_LINK_DOWN,
+	AQ_PM_WOL_PACKET_MAXIMUM
 };
 
-enum ndisPmProtocolOffloadType {
-    ndisPMProtocolOffloadIdUnspecified,
-    ndisPMProtocolOffloadIdIPv4ARP,
-    ndisPMProtocolOffloadIdIPv6NS,
-    ndisPMProtocolOffload80211RSNRekey,
-    ndisPMProtocolOffloadIdMaximum
+enum ndis_pm_protocol_offload_type {
+	NDIS_PM_PROTOCOL_OFFLOAD_ID_UNSPECIFIED,
+	NDIS_PM_PROTOCOL_OFFLOAD_ID_IPV4_ARP,
+	NDIS_PM_PROTOCOL_OFFLOAD_ID_IPV6_NS,
+	NDIS_PM_PROTOCOL_OFFLOAD_80211_RSN_REKEY,
+	NDIS_PM_PROTOCOL_OFFLOAD_ID_MAXIMUM
 };
 
-struct drvMsgEnableWakeup {
-    uint32_t patternMaskWindows;
-    uint32_t patternMaskAquantia;
-    uint32_t patternMaskOther;
-    uint32_t offloadsMaskWindows;
-    uint32_t offloadsMaskAquantia;
+struct drv_msg_enable_wakeup {
+	u32 pattern_mask_windows;
+	u32 pattern_mask_aquantia;
+	u32 pattern_mask_other;
+	u32 offloads_mask_windows;
+	u32 offloads_mask_aquantia;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddIpv4TcpSynWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4SourceAddress;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4DestAddress;
-    union {
-        uint8_t v8[2];
-        uint16_t v16;
-    } TCPSourcePortNumber;
-    union {
-        uint8_t v8[2];
-        uint16_t v16;
-    } TCPDestPortNumber;
+struct drv_msg_wol_add_ipv4_tcp_syn_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_source_address;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_dest_address;
+	union {
+		u8 v8[2];
+		u16 v16;
+	} tcp_source_port_number;
+	union {
+		u8 v8[2];
+		u16 v16;
+	} tcp_dest_port_number;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddIpv6TcpSynWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } IPv6SourceAddress;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } IPv6DestAddress;
-    union {
-        uint8_t v8[2];
-        uint16_t v16;
-    } TCPSourcePortNumber;
-    union {
-        uint8_t v8[2];
-        uint16_t v16;
-    } TCPDestPortNumber;
+struct drv_msg_wol_add_ipv6_tcp_syn_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} ipv6_source_address;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} ipv6_dest_address;
+	union {
+		u8 v8[2];
+		u16 v16;
+	} tcp_source_port_number;
+	union {
+		u8 v8[2];
+		u16 v16;
+	} tcp_dest_port_number;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddIpv4PingWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4SourceAddress;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4DestAddress;
+struct drv_msg_wol_add_ipv4_ping_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_source_address;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_dest_address;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddIpv6PingWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } IPv6SourceAddress;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } IPv6DestAddress;
+struct drv_msg_wol_add_ipv6_ping_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} ipv6_source_address;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} ipv6_dest_address;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddEapolRequestIdMessageWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4SourceAddress;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4DestAddress;
+struct drv_msg_wol_add_eapol_request_id_message_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_source_address;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_dest_address;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddBitmapPattern {
-    uint32_t Flags;
-    uint32_t MaskOffset;
-    uint32_t MaskSize;
-    uint32_t PatternOffset;
-    uint32_t PatternSize;
+struct drv_msg_wol_add_bitmap_pattern {
+	u32 flags;
+	u32 mask_offset;
+	u32 mask_size;
+	u32 pattern_offset;
+	u32 pattern_size;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddMagicPacketPattern {
-    uint8_t macAddr[6];
+struct drv_msg_wol_add_magic_packet_pattern {
+	u8 mac_addr[6];
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddArpWoLPacketParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[4];
-        uint32_t v32;
-    } IPv4Address;
+struct drv_msg_wol_add_arp_wol_packet_parameters {
+	u32 flags;
+	union {
+		u8 v8[4];
+		u32 v32;
+	} ipv4_address;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddLinkUpWoLParameters {
-    uint32_t timeout;
+struct drv_msg_wol_add_link_up_wol_parameters {
+	u32 timeout;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAddLinkDownWoLParameters {
-    uint32_t timeout;
+struct drv_msg_wol_add_link_down_wol_parameters {
+	u32 timeout;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLAdd {
-    uint32_t priority; // Currently not used
-    uint32_t packetType; // One of ndisPmWoLPacket or aqPmWoLPacket
-    uint32_t patternId; // Id to save - will be used in remove message
-    uint32_t nextWoLPatternOffset; // For chaining multiple additions in one request
+struct drv_msg_wol_add {
+	u32 priority; // Currently not used
+	u32 packet_type; // One of ndisPmWoLPacket or aqPmWoLPacket
+	u32 pattern_id; // Id to save - will be used in remove message
+	u32 next_wol_pattern_offset; // For chaining multiple additions in one request
 
-    // Depends on `parrernId`
-    union _WOL_PATTERN {
-        struct drvMsgWoLAddIpv4TcpSynWoLPacketParameters wolIpv4TcpSyn;
-        struct drvMsgWoLAddIpv6TcpSynWoLPacketParameters wolIpv6TcpSyn;
-        struct drvMsgWoLAddEapolRequestIdMessageWoLPacketParameters wolEapolRequestIdMessage;
-        struct drvMsgWoLAddBitmapPattern wolBitmap;
-        struct drvMsgWoLAddMagicPacketPattern wolMagicPacket;
-        struct drvMsgWoLAddIpv4PingWoLPacketParameters wolIpv4Ping;
-        struct drvMsgWoLAddIpv6PingWoLPacketParameters wolIpv6Ping;
-        struct drvMsgWoLAddArpWoLPacketParameters wolArp;
-        struct drvMsgWoLAddLinkUpWoLParameters wolLinkUpReason;
-        struct drvMsgWoLAddLinkDownWoLParameters wolLinkDownReason;
-    } wolPattern;
+	// Depends on `parrernId`
+	union _WOL_PATTERN {
+		struct drv_msg_wol_add_ipv4_tcp_syn_wol_packet_parameters wol_ipv4_tcp_syn;
+		struct drv_msg_wol_add_ipv6_tcp_syn_wol_packet_parameters wol_ipv6_tcp_syn;
+		struct drv_msg_wol_add_eapol_request_id_message_wol_packet_parameters
+			wol_eapol_request_id_message;
+		struct drv_msg_wol_add_bitmap_pattern wol_bitmap;
+		struct drv_msg_wol_add_magic_packet_pattern wol_magic_packet;
+		struct drv_msg_wol_add_ipv4_ping_wol_packet_parameters wol_ipv4_ping;
+		struct drv_msg_wol_add_ipv6_ping_wol_packet_parameters wol_ipv6_ping;
+		struct drv_msg_wol_add_arp_wol_packet_parameters wol_arp;
+		struct drv_msg_wol_add_link_up_wol_parameters wol_link_up_reason;
+		struct drv_msg_wol_add_link_down_wol_parameters wol_link_down_reason;
+	} wol_pattern;
 } FW_PACK_STRUCT;
 
-struct drvMsgWoLRemove {
-    uint32_t id;
+struct drv_msg_wol_remove {
+	u32 id;
 } FW_PACK_STRUCT;
 
-struct ipv4ArpParameters {
-    uint32_t flags;
-    uint8_t remoteIPv4Address[4];
-    uint8_t hostIPv4Address[4];
-    uint8_t macAddress[6];
+struct ipv4_arp_parameters {
+	u32 flags;
+	u8 remote_ipv4_address[4];
+	u8 host_ipv4_address[4];
+	u8 mac_address[6];
 } FW_PACK_STRUCT;
 
-struct ipv6NsParameters {
-    uint32_t flags;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } remoteIPv6Address;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } solicitedNodeIPv6Address;
-    union {
-        uint8_t v8[16];
-        uint32_t v32[4];
-    } targetIPv6Addresses[2];
-    uint8_t macAddress[6];
+struct ipv6_ns_parameters {
+	u32 flags;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} remote_ipv6_address;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} solicited_node_ipv6_address;
+	union {
+		u8 v8[16];
+		u32 v32[4];
+	} target_ipv6_addresses[2];
+	u8 mac_address[6];
 } FW_PACK_STRUCT;
 
-struct drvMsgOffloadAdd {
-    uint32_t priority;
-    uint32_t protocolOffloadType;
-    uint32_t protocolOffloadId;
-    uint32_t nextProtocolOffloadOffset;
-    union {
-        struct ipv4ArpParameters ipv4Arp;
-        struct ipv6NsParameters ipv6Ns;
-    } wolOffload;
+struct drv_msg_offload_add {
+	u32 priority;
+	u32 protocol_offload_type;
+	u32 protocol_offload_id;
+	u32 next_protocol_offload_offset;
+	union {
+		struct ipv4_arp_parameters ipv4_arp;
+		struct ipv6_ns_parameters ipv6_ns;
+	} wol_offload;
 } FW_PACK_STRUCT;
 
-struct drvMsgOffloadRemove {
-    uint32_t id;
+struct drv_msg_offload_remove {
+	u32 id;
 } FW_PACK_STRUCT;
 
-struct drvMsmSettings {
-    uint32_t msmReg054;
-    uint32_t msmReg058;
-    uint32_t msmReg05c;
-    uint32_t msmReg060;
-    uint32_t msmReg064;
-    uint32_t msmReg068;
-    uint32_t msmReg06c;
-    uint32_t msmReg070;
-    uint32_t flags;     // Valid for message DRV_MSG_MSM_EX only
+struct drv_msm_settings {
+	u32 msm_reg_054;
+	u32 msm_reg_058;
+	u32 msm_reg_05c;
+	u32 msm_reg_060;
+	u32 msm_reg_064;
+	u32 msm_reg_068;
+	u32 msm_reg_06c;
+	u32 msm_reg_070;
+	u32 flags;     // Valid for message DRV_MSG_MSM_EX only
 } FW_PACK_STRUCT;
 
 //struct drvMsgProvisioning {
-//    uint32_t command;
-//    uint32_t len;
+//    u32 command;
+//    u32 len;
 //    provList_t list;
 //} FW_PACK_STRUCT;
 
 //struct drvMsgSmbusProxy {
-//    uint32_t typeMsg;
+//    u32 typeMsg;
 //    union {
 //        struct smbusProxyWrite smbWrite;
 //        struct smbusProxyRead smbRead;
@@ -399,23 +392,23 @@ struct drvMsmSettings {
 //    } FW_PACK_STRUCT;
 //} FW_PACK_STRUCT;
 
-struct drvIface {
-    uint32_t msgId;
+struct drv_iface {
+	u32 msg_id;
 
-    union {
-        struct drvMsgPing msgPing;
-        struct drvMsgArp msgArp;
-        struct drvMsgInject msgInject;
-        struct drvMsgWoLAdd msgWoLAdd;
-        struct drvMsgWoLRemove msgWoLRemove;
-        struct drvMsgEnableWakeup msgEnableWakeup;
-        struct drvMsmSettings msgMsm;
-//        struct drvMsgProvisioning msgProvisioning;
-        struct drvMsgOffloadAdd msgOffloadAdd;
-        struct drvMsgOffloadRemove msgOffloadRemove;
-//        struct drvMsgSmbusProxy msgSmbusProxy;
-        struct offloadInfo fw2xOffloads;
-    } FW_PACK_STRUCT;
+	union {
+		struct drv_msg_ping msg_ping;
+		struct drv_msg_arp msg_arp;
+		struct drv_msg_inject msg_inject;
+		struct drv_msg_wol_add msg_wol_add;
+		struct drv_msg_wol_remove msg_wol_remove;
+		struct drv_msg_enable_wakeup msg_enable_wakeup;
+		struct drv_msm_settings msg_msm;
+		//struct drvMsgProvisioning msg_provisioning;
+		struct drv_msg_offload_add msg_offload_add;
+		struct drv_msg_offload_remove msg_offload_remove;
+		//struct drvMsgSmbusProxy msg_smbus_proxy;
+		struct offload_info fw2x_offloads;
+	} FW_PACK_STRUCT;
 } FW_PACK_STRUCT;
 
 #endif
