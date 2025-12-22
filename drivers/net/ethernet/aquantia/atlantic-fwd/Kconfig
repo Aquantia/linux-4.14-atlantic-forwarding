@@ -9,7 +9,27 @@ config ATLFWD_FWD
        default n
        help
 
-         Say Y to enable the forwarding-engine API
+         Enable the forwarding-engine API that provides direct hardware access
+         for high-performance packet processing applications. This API allows
+         user-space applications and kernel modules to bypass the standard
+         network stack and directly interact with the hardware forwarding
+         rings for zero-copy packet transmission and reception.
+
+         The forwarding-engine API provides:
+         - Direct ring buffer access for minimal latency packet processing
+         - Hardware-accelerated packet forwarding capabilities
+         - Custom packet classification and filtering
+         - Integration with user-space networking frameworks
+         - Support for specialized networking applications
+
+         This feature is essential for applications that require maximum
+         throughput and minimum latency, such as network function virtualization
+         (NFV), software-defined networking (SDN), packet inspection, and
+         high-frequency trading applications.
+
+         If you are building a general-purpose system or don't need specialized
+         packet forwarding capabilities, say N. Say Y only if you specifically
+         need direct hardware access for high-performance networking applications.
 
 config ATLFWD_FWD_RXBUF
        int
