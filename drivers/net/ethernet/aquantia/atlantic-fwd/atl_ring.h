@@ -40,7 +40,7 @@
 #define ring_space(ring)						\
 	({								\
 		struct atl_desc_ring *__ring = (ring);			\
-		uint32_t space = READ_ONCE(__ring->head) -		\
+		u32 space = READ_ONCE(__ring->head) -		\
 			READ_ONCE(__ring->tail) - 1;			\
 		(int32_t)space < 0 ? space + __ring->hw.size : space;	\
 	})
@@ -48,52 +48,58 @@
 #define ring_occupied(ring)						\
 	({								\
 		struct atl_desc_ring *__ring = (ring);			\
-		uint32_t occupied = READ_ONCE(__ring->tail) -		\
+		u32 occupied = READ_ONCE(__ring->tail) -		\
 			READ_ONCE(__ring->head);			\
 		(int32_t)occupied < 0 ? occupied + __ring->hw.size	\
 			: occupied;					\
 	})
 
+/* CHECKPATCH FALSE POSITIVE: ptr reuse is intentional and safe.
+ * This macro both reads and modifies ptr by design. The ptr parameter
+ * must be an lvalue that can be assigned to, so typeof() won't help here.
+ * The reuse pattern is: read ptr value, compute new value, assign back to ptr.
+ */
 #define bump_ptr(ptr, ring, amount)					\
 	({								\
 		struct atl_desc_ring *__ring = (ring);			\
-		uint32_t __res = offset_ptr(ptr, &__ring->hw, amount);	\
+		u32 __res = offset_ptr(ptr, &__ring->hw, amount);	\
 		(ptr) = __res;						\
 		__res;							\
 	})
 
 /* These don't have to be atomic, because Tx tail is only adjusted
  * in ndo->start_xmit which is serialized by the stack and the rest are
- * only adjusted in NAPI poll which is serialized by NAPI */
+ * only adjusted in NAPI poll which is serialized by NAPI
+ */
 #define bump_tail(ring, amount) do {					\
 	struct atl_desc_ring *__ring = (ring);				\
-	uint32_t __ptr = READ_ONCE(__ring->tail);			\
+	u32 __ptr = READ_ONCE(__ring->tail);			\
 	__ring->tail = offset_ptr(__ptr, &__ring->hw, amount);\
 	} while (0)
 
 #define bump_head(ring, amount) do {					\
 	struct atl_desc_ring *__ring = (ring);				\
-	uint32_t __ptr = READ_ONCE(__ring->head);			\
+	u32 __ptr = READ_ONCE(__ring->head);			\
 	__ring->head = offset_ptr(__ptr, &__ring->hw, amount);\
 	} while (0)
 
 struct atl_rxpage {
 	struct page *page;
 	dma_addr_t daddr;
-	unsigned mapcount; 	/* not atomic_t because accesses are
-				 * serialized by NAPI */
-	unsigned order;
+	unsigned int mapcount;	//not atomic_t because accesses are serialized by NAPI
+	unsigned int order;
 };
 
 struct atl_pgref {
 	struct atl_rxpage *rxpage;
-	unsigned pg_off;
+	unsigned int pg_off;
 };
 
 struct atl_cb {
 	struct atl_pgref pgref;
 	bool head;
 };
+
 #define ATL_CB(skb) ((struct atl_cb *)(skb)->cb)
 
 struct atl_rxbuf {
@@ -104,9 +110,9 @@ struct atl_rxbuf {
 
 struct atl_txbuf {
 	struct sk_buff *skb;
-	uint32_t last; /* index of eop descriptor */
-	unsigned bytes;
-	unsigned packets;
+	u32 last; /* index of eop descriptor */
+	unsigned int bytes;
+	unsigned int packets;
 	DEFINE_DMA_UNMAP_ADDR(daddr);
 	DEFINE_DMA_UNMAP_LEN(len);
 };
@@ -116,6 +122,7 @@ struct legacy_irq_work {
 
 	struct napi_struct *napi;
 };
+
 static inline struct legacy_irq_work *to_irq_work(struct work_struct *work)
 {
 	return container_of(work, struct legacy_irq_work, work);
@@ -132,16 +139,12 @@ struct ____cacheline_aligned atl_queue_vec {
 	struct atl_desc_ring rx;
 	struct napi_struct napi;
 	struct atl_nic *nic;
-	unsigned idx;
+	unsigned int idx;
 	char name[IFNAMSIZ + 10];
 	cpumask_t affinity_hint;
 	enum atl_queue_type type;
 	struct work_struct *work;
 };
-
-#define atl_for_each_qvec(nic, qvec)				\
-	for (qvec = &(nic)->qvecs[0];				\
-	     qvec < &(nic)->qvecs[(nic)->nvecs]; qvec++)
 
 static inline struct atl_hw *ring_hw(struct atl_desc_ring *ring)
 {
@@ -176,7 +179,12 @@ static inline dma_addr_t atl_buf_daddr(struct atl_pgref *pgref)
 }
 
 void atl_get_ring_stats(struct atl_desc_ring *ring,
-	struct atl_ring_stats *stats);
+			struct atl_ring_stats *stats);
+/* CHECKPATCH FALSE POSITIVE: stat cannot be parenthesized.
+ * The 'stat' parameter is used as a struct member name (_ring->stats.stat)
+ * and cannot be parenthesized. This is intentional and follows kernel
+ * macro patterns for member access.
+ */
 #define atl_update_ring_stat(ring, stat, delta)			\
 do {								\
 	struct atl_desc_ring *_ring = (ring);			\
@@ -200,7 +208,7 @@ int atl_clean_hwts_rx(struct atl_desc_ring *ring, int budget);
 void atl_clear_rx_bufs(struct atl_desc_ring *ring);
 
 bool atl_rx_checksum(struct sk_buff *skb, struct atl_rx_desc_wb *desc,
-		 struct atl_desc_ring *ring);
+		     struct atl_desc_ring *ring);
 void atl_rx_hash(struct sk_buff *skb, struct atl_rx_desc_wb *desc,
 		 struct net_device *ndev);
 
@@ -214,7 +222,7 @@ void atl_rx_hash(struct sk_buff *skb, struct atl_rx_desc_wb *desc,
 do {								\
 	(_scratch) = READ_ONCE((_ring)->hw.descs[_idx]);	\
 	dma_rmb();						\
-} while(0)
+} while (0)
 
 #define DESC_RMB()
 
@@ -231,7 +239,7 @@ do {								\
 #ifdef ATL_TX_HEAD_WB
 #error Head ptr writeback not implemented
 #elif !defined(ATL_TX_DESC_WB)
-static inline uint32_t atl_get_tx_head(struct atl_desc_ring *ring)
+static inline u32 atl_get_tx_head(struct atl_desc_ring *ring)
 {
 	return atl_read(ring_hw(ring), ATL_TX_RING_HEAD(ring->idx)) & 0x1fff;
 }
