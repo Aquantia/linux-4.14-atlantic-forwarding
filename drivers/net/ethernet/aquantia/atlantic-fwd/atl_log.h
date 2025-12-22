@@ -42,20 +42,30 @@
 #define atl_nic_err(fmt, args...)		\
 	dev_err(&nic->hw.pdev->dev, fmt, ## args)
 
+/* For situations when hw might not be initialized
+ *
+ * CHECKPATCH FALSE POSITIVE: fmt reuse is safe here.
+ * Format strings in logging macros are typically string literals
+ * and reuse is standard practice in kernel logging patterns.
+ */
 #define atl_dev_init_warn(fmt, args...)					\
 do {									\
 	if (hw)								\
 		atl_dev_warn(fmt, ## args);				\
 	else								\
-		printk(KERN_WARNING "%s: " fmt, atl_driver_name, ##args); \
+		pr_warn(ATL_DRV_NAME ": " fmt, ##args);			\
 } while (0)
 
+/* CHECKPATCH FALSE POSITIVE: fmt reuse is safe here.
+ * Format strings in logging macros are typically string literals
+ * and reuse is standard practice in kernel logging patterns.
+ */
 #define atl_dev_init_err(fmt, args...)					\
 do {									\
 	if (hw)								\
 		atl_dev_err(fmt, ## args);				\
 	else								\
-		printk(KERN_ERR "%s: " fmt, atl_driver_name, ##args);	\
+		pr_err(ATL_DRV_NAME ": " fmt, ##args);			\
 } while (0)
 
 #else /* __KERNEL__ */
