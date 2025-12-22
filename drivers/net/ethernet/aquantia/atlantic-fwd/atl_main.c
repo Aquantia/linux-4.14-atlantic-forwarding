@@ -19,7 +19,7 @@
 #include "atl_ptp.h"
 #include "atl_fwd.h"
 
-const char atl_driver_name[] = "atlantic-fwd";
+static const char atl_driver_name[] = ATL_DRV_NAME;
 
 unsigned int atl_max_queues = ATL_MAX_QUEUES;
 module_param_named(max_queues, atl_max_queues, uint, 0444);
@@ -30,7 +30,7 @@ static unsigned int atl_rx_mod = 15, atl_tx_mod = 15;
 module_param_named(rx_mod, atl_rx_mod, uint, 0444);
 module_param_named(tx_mod, atl_tx_mod, uint, 0444);
 
-static unsigned int atl_keep_link = 0;
+static unsigned int atl_keep_link;
 module_param_named(keep_link, atl_keep_link, uint, 0644);
 
 static unsigned int atl_sleep_delay = 10000;
@@ -81,7 +81,7 @@ static int atl_start(struct atl_nic *nic)
 		atl_stop_link(nic);
 
 	/* if (ret) */
-	/* 	goto out; */
+	/*	goto out; */
 	/* ret = atl_fwd_resume_rings(nic); */
 
 /* out: */
@@ -282,7 +282,7 @@ static int atl_set_mac_address(struct net_device *ndev, void *priv)
 		return -EADDRNOTAVAIL;
 
 	ether_addr_copy(hw->mac_addr, addr->sa_data);
-	ether_addr_copy((u8 *) ndev->dev_addr, addr->sa_data);
+	ether_addr_copy((u8 *)ndev->dev_addr, addr->sa_data);
 
 	if (netif_running(ndev) && pm_runtime_active(&nic->hw.pdev->dev))
 		atl_set_uc_flt(hw, nic->rxf_mac.base_index, hw->mac_addr);
@@ -439,15 +439,15 @@ int atl_fw_configure(struct atl_hw *hw)
 	int ret;
 
 	ret = hw->mcp.ops->set_mediadetect(hw,
-			!!(nic->priv_flags & ATL_PF_BIT(MEDIA_DETECT)));
+			!!(nic->priv_flags & ATL_PF_MEDIA_DETECT_BIT));
 	if (ret && ret != -EOPNOTSUPP)
 		return ret;
 	ret = hw->mcp.ops->set_downshift(hw,
-			!!(nic->priv_flags & ATL_PF_BIT(DOWNSHIFT)));
+			!!(nic->priv_flags & ATL_PF_DOWNSHIFT_BIT));
 	if (ret && ret != -EOPNOTSUPP)
 		return ret;
 	ret = hw->mcp.ops->set_pad_stripping(hw,
-			!!(nic->priv_flags & ATL_PF_BIT(STRIP_PAD)));
+			!!(nic->priv_flags & ATL_PF_STRIP_PAD_BIT));
 	if (ret && ret != -EOPNOTSUPP)
 		return ret;
 	ret = hw->mcp.ops->update_thermal(hw);
@@ -477,7 +477,7 @@ static void atl_work(struct work_struct *work)
 #endif
 out:
 	if (test_bit(ATL_ST_ENABLED, &hw->state))
-	    mod_timer(&nic->work_timer, jiffies + HZ);
+		mod_timer(&nic->work_timer, jiffies + HZ);
 }
 
 static void atl_work_timer(struct timer_list *timer)
@@ -517,7 +517,7 @@ static const struct pci_device_id atl_pci_tbl[] = {
 	{}
 };
 
-static uint8_t atl_def_rss_key[ATL_RSS_KEY_SIZE] = {
+static u8 atl_def_rss_key[ATL_RSS_KEY_SIZE] = {
 	0x1e, 0xad, 0x71, 0x87, 0x65, 0xfc, 0x26, 0x7d,
 	0x0d, 0x45, 0x67, 0x74, 0xcd, 0x06, 0x1a, 0x18,
 	0xb6, 0xc1, 0xf0, 0xc7, 0xbb, 0x18, 0xbe, 0xf8,
@@ -558,9 +558,9 @@ static int atl_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (ret)
 		return ret;
 
-	if (!dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64)))
+	if (!dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64))) {
 		pci_64 = 1;
-	else {
+	} else {
 		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 		if (ret) {
 			dev_err(&pdev->dev, "Set DMA mask failed: %d\n", ret);
@@ -595,13 +595,13 @@ static int atl_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	hw = &nic->hw;
 	__set_bit(ATL_ST_ENABLED, &hw->state);
 	hw->regs = ioremap(pci_resource_start(pdev, 0),
-				pci_resource_len(pdev, 0));
+			   pci_resource_len(pdev, 0));
 	if (!hw->regs) {
 		ret = -EIO;
 		goto err_ioremap;
 	}
 
-	nic->priv_flags = ATL_PF_BIT(DOWNSHIFT);
+	nic->priv_flags = ATL_PF_DOWNSHIFT_BIT;
 	ret = atl_hwinit(hw, id->driver_data);
 	if (ret)
 		goto err_hwinit;
@@ -623,7 +623,7 @@ static int atl_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		/* goto err_hwinit; */
 	}
 
-	ether_addr_copy((u8 *) ndev->dev_addr, hw->mac_addr);
+	ether_addr_copy((u8 *)ndev->dev_addr, hw->mac_addr);
 	atl_dev_dbg("got MAC address: %pM\n", hw->mac_addr);
 
 	ret = atl_ptp_init(nic);
@@ -697,7 +697,8 @@ static int atl_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 * doing ifup on newly created netdev, but either they will
 	 * succeed with grabbing RTNL first and handle ring-related
 	 * errors there, or we will be first and just bring the
-	 * global HW up. */
+	 * global HW up.
+	 */
 	rtnl_lock();
 	atl_start(nic);
 	rtnl_unlock();
@@ -918,6 +919,7 @@ static int atl_thaw(struct device *dev)
 static void atl_shutdown(struct pci_dev *pdev)
 {
 	struct atl_nic *nic = pci_get_drvdata(pdev);
+
 	atl_suspend_common(&pdev->dev, nic->hw.wol_mode);
 }
 
@@ -940,14 +942,12 @@ static int atl_pm_runtime_idle(struct device *dev)
 	if (!nic || nic->hw.pdev != pdev)
 		return -EBUSY;
 
-	if (!netif_carrier_ok(nic->ndev)) {
+	if (!netif_carrier_ok(nic->ndev))
 		pm_schedule_suspend(dev, atl_sleep_delay);
-	}
 
 	return -EBUSY;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
 static void atl_reset_prepare(struct pci_dev *pdev)
 {
 	struct atl_nic *nic = pci_get_drvdata(pdev);
@@ -968,7 +968,7 @@ static void atl_reset_done(struct pci_dev *pdev)
 
 	if (!nic) {
 		dev_err(&pdev->dev, "%s failed, device is unrecoverable\n",
-				__func__);
+			__func__);
 		return;
 	}
 
@@ -983,10 +983,9 @@ static void atl_reset_done(struct pci_dev *pdev)
 }
 
 static const struct pci_error_handlers atl_err_handlers = {
-        .reset_prepare = atl_reset_prepare,
-        .reset_done = atl_reset_done,
+	.reset_prepare = atl_reset_prepare,
+	.reset_done = atl_reset_done,
 };
-#endif
 
 const struct dev_pm_ops atl_pm_ops = {
 	.suspend = atl_suspend_poweroff,
@@ -1008,10 +1007,7 @@ static struct pci_driver atl_pci_ops = {
 #ifdef CONFIG_PM
 	.driver.pm = &atl_pm_ops,
 #endif
-
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
-        .err_handler = &atl_err_handlers,
-#endif
+	.err_handler = &atl_err_handlers,
 
 };
 
@@ -1023,7 +1019,7 @@ module_param_named(thermal_monitor, atl_def_thermal_monitor, bool, 0444);
 module_param_named(thermal_throttle, atl_def_thermal_throttle, bool, 0444);
 module_param_named(thermal_ignore_limits, atl_def_thermal_ignore_lims, bool, 0444);
 
-static uint8_t atl_def_thermal_crit = 108, atl_def_thermal_high = 100,
+static u8 atl_def_thermal_crit = 108, atl_def_thermal_high = 100,
 	atl_def_thermal_low = 80;
 module_param_named(thermal_crit, atl_def_thermal_crit, byte, 0444);
 module_param_named(thermal_high, atl_def_thermal_high, byte, 0444);
@@ -1034,16 +1030,14 @@ static int __init atl_module_init(void)
 	struct atl_hw *hw = NULL;
 	int ret;
 
-	if ((atl_tx_ring_size < 8) || (atl_tx_ring_size > ATL_MAX_RING_SIZE)) {
-		atl_dev_init_err(
-			"Bad atl_tx_ring_size value %d, must be between 8 and %d inclusive\n",
-			atl_tx_ring_size, ATL_MAX_RING_SIZE);
+	if (atl_tx_ring_size < 8 || atl_tx_ring_size > ATL_MAX_RING_SIZE) {
+		atl_dev_init_err("Bad atl_tx_ring_size %d, must be 8-%d\n",
+				 atl_tx_ring_size, ATL_MAX_RING_SIZE);
 		return -EINVAL;
 	}
-	if ((atl_rx_ring_size < 8) || (atl_rx_ring_size > ATL_MAX_RING_SIZE)) {
-		atl_dev_init_err(
-			"Bad atl_rx_ring_size value %d, must be between 8 and %d inclusive\n",
-			atl_rx_ring_size, ATL_MAX_RING_SIZE);
+	if (atl_rx_ring_size < 8 || atl_rx_ring_size > ATL_MAX_RING_SIZE) {
+		atl_dev_init_err("Bad atl_rx_ring_size %d, must be 8-%d\n",
+				 atl_rx_ring_size, ATL_MAX_RING_SIZE);
 		return -EINVAL;
 	}
 
@@ -1060,17 +1054,15 @@ static int __init atl_module_init(void)
 		return ret;
 
 	if (atl_max_queues < 1 || atl_max_queues > ATL_MAX_QUEUES) {
-		atl_dev_init_err(
-			"Bad atl_max_queues value %d, must be between 1 and %d inclusive\n",
-			atl_max_queues, ATL_MAX_QUEUES);
+		atl_dev_init_err("Bad atl_max_queues %d, must be 1-%d\n",
+				 atl_max_queues, ATL_MAX_QUEUES);
 		return -EINVAL;
 	}
 
 	if (atl_max_queues_non_msi < 1 ||
 	    atl_max_queues_non_msi > atl_max_queues) {
-		atl_dev_init_err(
-			"Bad atl_max_queues_non_msi value %d, must be between 1 and %d inclusive\n",
-			atl_max_queues_non_msi, atl_max_queues);
+		atl_dev_init_err("Bad atl_max_queues_non_msi %d, must be 1-%d\n",
+				 atl_max_queues_non_msi, atl_max_queues);
 		return -EINVAL;
 	}
 
@@ -1118,6 +1110,6 @@ static void __exit atl_module_exit(void)
 module_exit(atl_module_exit);
 
 MODULE_DEVICE_TABLE(pci, atl_pci_tbl);
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 MODULE_VERSION(ATL_VERSION);
 MODULE_AUTHOR("Aquantia Corp.");
