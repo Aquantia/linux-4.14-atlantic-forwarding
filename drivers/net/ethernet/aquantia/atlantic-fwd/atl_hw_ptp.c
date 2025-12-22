@@ -31,12 +31,12 @@
 #define HW_ATL_PCS_PTP_TS_VAL_ADDR(index) (0x00004900 + (index) * 0x4)
 
 static void hw_atl_pcs_ptp_clock_read_enable(struct atl_hw *hw,
-				      u32 ptp_clock_read_enable)
+					     u32 ptp_clock_read_enable)
 {
 	atl_write_bits(hw, HW_ATL_PCS_PTP_CLOCK_READ_ENABLE_ADR,
-			    HW_ATL_PCS_PTP_CLOCK_READ_ENABLE_SHIFT,
-			    HW_ATL_PCS_PTP_CLOCK_READ_ENABLE_WIDTH,
-			    ptp_clock_read_enable);
+		       HW_ATL_PCS_PTP_CLOCK_READ_ENABLE_SHIFT,
+		       HW_ATL_PCS_PTP_CLOCK_READ_ENABLE_WIDTH,
+		       ptp_clock_read_enable);
 }
 
 static u32 hw_atl_pcs_ptp_clock_get(struct atl_hw *hw, u32 index)
@@ -131,14 +131,14 @@ int hw_atl_adj_clock_freq(struct atl_hw *hw, s32 ppb)
 
 	fwreq.msg_id = ptp_adj_freq_msg;
 	hw_atl_adj_params_get(ATL_HW_MAC_COUNTER_HZ, ppb,
-				 &fwreq.adj_freq.ns_mac,
-				 &fwreq.adj_freq.fns_mac);
+			      &fwreq.adj_freq.ns_mac,
+			      &fwreq.adj_freq.fns_mac);
 	hw_atl_adj_params_get(ATL_HW_PHY_COUNTER_HZ, ppb,
-				 &fwreq.adj_freq.ns_phy,
-				 &fwreq.adj_freq.fns_phy);
+			      &fwreq.adj_freq.ns_phy,
+			      &fwreq.adj_freq.fns_phy);
 	hw_atl_mac_adj_param_calc(&fwreq.adj_freq,
-				     ATL_HW_PHY_COUNTER_HZ,
-				     ATL_HW_MAC_COUNTER_HZ);
+				  ATL_HW_PHY_COUNTER_HZ,
+				  ATL_HW_MAC_COUNTER_HZ);
 
 	return mcp->ops->send_ptp_req(hw, &fwreq);
 }
@@ -208,9 +208,9 @@ u16 hw_atl_rx_extract_ts(struct atl_hw *hw, u8 *p, unsigned int len,
 	/* The TIMESTAMP in the end of package has following format:
 	 * (big-endian)
 	 *   struct {
-	 *     uint64_t sec;
-	 *     uint32_t ns;
-	 *     uint16_t stream_id;
+	 *     u64 sec;
+	 *     u32 ns;
+	 *     u16 stream_id;
 	 *   };
 	 */
 	ptr = p + (len - offset);
