@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 #
 # aQuantia device configuration
 #
@@ -5,11 +6,11 @@
 config NET_VENDOR_AQUANTIA
 	bool "aQuantia devices"
 	default y
-	---help---
+	help
 	  Set this to y if you have an Ethernet network cards that uses the aQuantia
 	  AQC107/AQC108 chipset.
 
-	  This option does not build any drivers; it casues the aQuantia
+	  This option does not build any drivers; it causes the aQuantia
 	  drivers that can be built to appear in the list of Ethernet drivers.
 
 
@@ -17,15 +18,34 @@ if NET_VENDOR_AQUANTIA
 
 config AQTION
 	tristate "aQuantia AQtion(tm) Support"
-	depends on PCI && X86_64
-	---help---
+	depends on PCI
+	depends on MACSEC || MACSEC=n
+	help
 	  This enables the support for the aQuantia AQtion(tm) Ethernet card.
 
 config AQFWD
 	tristate "aQuantia Forwarding driver"
-	depends on PCI && (X86_64 || ARM64)
-	---help---
-	  This enables the support for forwarding driver for the aQuantia AQtion(tm) Ethernet card.
+	depends on PCI && (X86_64 || ARM64 || ARM)
+	help
+	  This enables the aQuantia AQtion(tm) Ethernet forwarding driver which
+	  provides high-performance packet forwarding capabilities and offload
+	  engine APIs for hardware acceleration. The driver supports direct ring
+	  access for user-space applications, zero-copy packet forwarding, and
+	  hardware-accelerated network processing through dedicated forwarding
+	  rings separate from the standard network interface.
+
+	  This driver is designed for applications requiring high throughput and
+	  low latency packet processing, such as network appliances, routers,
+	  and specialized networking software that benefits from hardware offload
+	  capabilities.
+
+	  Additional features include netlink-based control interface, configurable
+	  buffer allocation for Rx/Tx forwarding rings, and integration with the
+	  Linux networking stack for hybrid forwarding scenarios.
+
+	  Say Y if you need high-performance packet forwarding or hardware offload
+	  capabilities with aQuantia AQtion Ethernet cards. Say M to build as a
+	  module. Say N if you only need standard Ethernet functionality.
 
 source "drivers/net/ethernet/aquantia/atlantic-fwd/Kconfig"
 
