@@ -140,7 +140,7 @@ static void atl_rotate_keys(u32 (*key)[8], int key_len)
 }
 
 #define STATS_2x32_TO_64(stat_field)                                           \
-	(((u64)stat_field[1] << 32) | stat_field[0])
+	(((u64)(stat_field)[1] << 32) | (stat_field)[0])
 
 static int atl_get_macsec_common_stats(struct atl_hw *hw,
 				       struct atl_macsec_common_stats *stats)
@@ -353,8 +353,8 @@ int atl_macsec_update_stats(struct atl_hw *hw)
 			if (!test_bit(assoc_num, &atl_txsc->tx_sa_idx_busy))
 				continue;
 			sa_idx = atl_txsc->hw_sc_idx | assoc_num;
-			ret = atl_get_txsa_stats(
-				hw, sa_idx, &atl_txsc->tx_sa_stats[assoc_num]);
+			ret = atl_get_txsa_stats(hw, sa_idx,
+						 &atl_txsc->tx_sa_stats[assoc_num]);
 			if (ret)
 				return ret;
 		}
@@ -370,8 +370,8 @@ int atl_macsec_update_stats(struct atl_hw *hw)
 				continue;
 			sa_idx = atl_rxsc->hw_sc_idx | assoc_num;
 
-			ret = atl_get_rxsa_stats(
-				hw, sa_idx, &atl_rxsc->rx_sa_stats[assoc_num]);
+			ret = atl_get_rxsa_stats(hw, sa_idx,
+						 &atl_rxsc->rx_sa_stats[assoc_num]);
 			if (ret)
 				return ret;
 		}
@@ -459,11 +459,6 @@ static int atl_mdo_dev_open(struct macsec_context *ctx)
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
 	int ret = 0;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	if (netif_carrier_ok(nic->ndev))
 		ret = atl_apply_secy_cfg(&nic->hw, ctx->secy);
 
@@ -475,11 +470,6 @@ static int atl_mdo_dev_open(struct macsec_context *ctx)
 static int atl_mdo_dev_stop(struct macsec_context *ctx)
 {
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	atl_fwd_notify(nic, ATL_FWD_NOTIFY_MACSEC_OFF, ctx->secy->netdev);
 
@@ -646,10 +636,8 @@ static int atl_mdo_add_secy(struct macsec_context *ctx)
 	u32 txsc_idx;
 	int ret = 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 0)
 	if (secy->xpn)
 		return -EOPNOTSUPP;
-#endif
 
 	sc_sa = sc_sa_from_num_an(MACSEC_NUM_AN);
 	if (sc_sa == atl_macsec_sa_sc_not_used)
@@ -664,11 +652,6 @@ static int atl_mdo_add_secy(struct macsec_context *ctx)
 	txsc_idx = ffz(hw->macsec_cfg.txsc_idx_busy);
 	if (txsc_idx == ATL_MACSEC_MAX_SC)
 		return -ENOSPC;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	hw->macsec_cfg.sc_sa = sc_sa;
 	hw->macsec_cfg.atl_txsc[txsc_idx].hw_sc_idx =
@@ -697,11 +680,6 @@ static int atl_mdo_upd_secy(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -ENOENT;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	secy = hw->macsec_cfg.atl_txsc[txsc_idx].sw_secy;
 
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
@@ -723,7 +701,7 @@ static int atl_clear_txsc(struct atl_nic *nic, const int txsc_idx,
 	memset(&tx_class_rec, 0, sizeof(tx_class_rec));
 	memset(&sc_rec, 0, sizeof(sc_rec));
 
-	for_each_set_bit (sa_num, &tx_sc->tx_sa_idx_busy, ATL_MACSEC_MAX_SA) {
+	for_each_set_bit(sa_num, &tx_sc->tx_sa_idx_busy, ATL_MACSEC_MAX_SA) {
 		ret = atl_clear_txsa(nic, tx_sc, sa_num, clear_type);
 		if (ret)
 			return ret;
@@ -772,11 +750,6 @@ static int atl_mdo_del_secy(struct macsec_context *ctx)
 {
 	struct atl_nic *nic = netdev_priv(ctx->netdev);
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	return atl_clear_secy(nic, ctx->secy, ATL_CLEAR_ALL);
 }
 
@@ -788,11 +761,7 @@ static int atl_update_txsa(struct atl_hw *hw, unsigned int sc_idx,
 	struct aq_mss_egress_sakey_record key_rec;
 	const unsigned int sa_idx = sc_idx | an;
 	struct aq_mss_egress_sa_record sa_rec;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
-	const u32 next_pn = tx_sa->next_pn;
-#else
 	const u32 next_pn = tx_sa->next_pn_halves.lower;
-#endif
 	int ret = 0;
 
 	atl_dev_dbg("set tx_sa %d: active=%d, next_pn=%d\n", an, tx_sa->active,
@@ -838,11 +807,6 @@ static int atl_mdo_add_txsa(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -EINVAL;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	set_bit(ctx->sa.assoc_num, &atl_txsc->tx_sa_idx_busy);
 
@@ -868,11 +832,6 @@ static int atl_mdo_upd_txsa(struct macsec_context *ctx)
 	txsc_idx = atl_get_txsc_idx_from_secy(hw, secy);
 	if (txsc_idx < 0)
 		return -EINVAL;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
@@ -919,11 +878,6 @@ static int atl_mdo_del_txsa(struct macsec_context *ctx)
 	txsc_idx = atl_get_txsc_idx_from_secy(&nic->hw, ctx->secy);
 	if (txsc_idx < 0)
 		return -EINVAL;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	return atl_clear_txsa(nic, &nic->hw.macsec_cfg.atl_txsc[txsc_idx],
 			      ctx->sa.assoc_num, ATL_CLEAR_ALL);
@@ -982,9 +936,8 @@ static int atl_set_rxsc(struct atl_hw *hw, const u32 rxsc_idx)
 	ret = aq_mss_set_ingress_preclass_record(hw, &pre_class_record,
 						 2 * rxsc_idx + 1);
 	if (ret) {
-		atl_dev_err(
-			"aq_mss_set_ingress_preclass_record failed with %d\n",
-			ret);
+		atl_dev_err("aq_mss_set_ingress_preclass_record failed with %d\n",
+			    ret);
 		return ret;
 	}
 
@@ -995,9 +948,8 @@ static int atl_set_rxsc(struct atl_hw *hw, const u32 rxsc_idx)
 	ret = aq_mss_set_ingress_preclass_record(hw, &pre_class_record,
 						 2 * rxsc_idx);
 	if (ret) {
-		atl_dev_err(
-			"aq_mss_set_ingress_preclass_record failed with %d\n",
-			ret);
+		atl_dev_err("aq_mss_set_ingress_preclass_record failed with %d\n",
+			    ret);
 		return ret;
 	}
 
@@ -1039,11 +991,6 @@ static int atl_mdo_add_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx >= rxsc_idx_max)
 		return -ENOSPC;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	cfg->atl_rxsc[rxsc_idx].hw_sc_idx =
 		atl_to_hw_sc_idx(rxsc_idx, cfg->sc_sa);
 	cfg->atl_rxsc[rxsc_idx].sw_secy = ctx->secy;
@@ -1072,11 +1019,6 @@ static int atl_mdo_upd_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	if (netif_carrier_ok(nic->ndev) && netif_running(ctx->secy->netdev))
 		return atl_set_rxsc(&nic->hw, rxsc_idx);
 
@@ -1091,7 +1033,7 @@ static int atl_clear_rxsc(struct atl_nic *nic, const int rxsc_idx,
 	int ret = 0;
 	int sa_num;
 
-	for_each_set_bit (sa_num, &rx_sc->rx_sa_idx_busy, ATL_MACSEC_MAX_SA) {
+	for_each_set_bit(sa_num, &rx_sc->rx_sa_idx_busy, ATL_MACSEC_MAX_SA) {
 		ret = atl_clear_rxsa(nic, rx_sc, sa_num, clear_type);
 		if (ret)
 			return ret;
@@ -1107,18 +1049,16 @@ static int atl_clear_rxsc(struct atl_nic *nic, const int rxsc_idx,
 		ret = aq_mss_set_ingress_preclass_record(hw, &pre_class_record,
 							 2 * rxsc_idx);
 		if (ret) {
-			atl_dev_err(
-				"aq_mss_set_ingress_preclass_record failed with %d\n",
-				ret);
+			atl_dev_err("aq_mss_set_ingress_preclass_record failed with %d\n",
+				    ret);
 			return ret;
 		}
 
 		ret = aq_mss_set_ingress_preclass_record(hw, &pre_class_record,
 							 2 * rxsc_idx + 1);
 		if (ret) {
-			atl_dev_err(
-				"aq_mss_set_ingress_preclass_record failed with %d\n",
-				ret);
+			atl_dev_err("aq_mss_set_ingress_preclass_record failed with %d\n",
+				    ret);
 			return ret;
 		}
 
@@ -1148,11 +1088,6 @@ static int atl_mdo_del_rxsc(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	if (netif_carrier_ok(nic->ndev))
 		clear_type = ATL_CLEAR_ALL;
 
@@ -1166,11 +1101,7 @@ static int atl_update_rxsa(struct atl_hw *hw, const unsigned int sc_idx,
 {
 	struct aq_mss_ingress_sakey_record sa_key_record;
 	struct aq_mss_ingress_sa_record sa_record;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 7, 0)
-	const u32 next_pn = rx_sa->next_pn;
-#else
 	const u32 next_pn = rx_sa->next_pn_halves.lower;
-#endif
 	const int sa_idx = sc_idx | an;
 	int ret = 0;
 
@@ -1231,11 +1162,6 @@ static int atl_mdo_add_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	set_bit(ctx->sa.assoc_num,
 		&hw->macsec_cfg.atl_rxsc[rxsc_idx].rx_sa_idx_busy);
 
@@ -1243,12 +1169,13 @@ static int atl_mdo_add_rxsa(struct macsec_context *ctx)
 	       ctx->sa.key, secy->key_len);
 
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
-		return atl_update_rxsa(
-			hw, hw->macsec_cfg.atl_rxsc[rxsc_idx].hw_sc_idx, secy,
-			ctx->sa.rx_sa, ctx->sa.key, ctx->sa.assoc_num);
+		return atl_update_rxsa(hw, hw->macsec_cfg.atl_rxsc[rxsc_idx].hw_sc_idx,
+			       secy, ctx->sa.rx_sa, ctx->sa.key,
+			       ctx->sa.assoc_num);
 
 	return 0;
 }
+
 static int atl_mdo_upd_rxsa(struct macsec_context *ctx)
 {
 	const struct macsec_rx_sc *rx_sc = ctx->sa.rx_sa->sc;
@@ -1261,15 +1188,10 @@ static int atl_mdo_upd_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	if (netif_carrier_ok(nic->ndev) && netif_running(secy->netdev))
-		return atl_update_rxsa(
-			hw, hw->macsec_cfg.atl_rxsc[rxsc_idx].hw_sc_idx, secy,
-			ctx->sa.rx_sa, NULL, ctx->sa.assoc_num);
+		return atl_update_rxsa(hw, hw->macsec_cfg.atl_rxsc[rxsc_idx].hw_sc_idx,
+			       secy, ctx->sa.rx_sa, NULL,
+			       ctx->sa.assoc_num);
 
 	return 0;
 }
@@ -1313,11 +1235,6 @@ static int atl_mdo_del_rxsa(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -EINVAL;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	return atl_clear_rxsa(nic, &nic->hw.macsec_cfg.atl_rxsc[rxsc_idx],
 			      ctx->sa.assoc_num, ATL_CLEAR_ALL);
 }
@@ -1328,13 +1245,11 @@ static int atl_mdo_get_dev_stats(struct macsec_context *ctx)
 	struct atl_hw *hw = &nic->hw;
 	struct atl_macsec_common_stats *stats = &hw->macsec_cfg.stats;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	atl_get_macsec_common_stats(hw, stats);
 
+	/* CHECKPATCH FALSE POSITIVE: These field names are defined by Linux
+	 * kernel MACsec API and must match the standard structure field names.
+	 */
 	ctx->stats.dev_stats->OutPktsUntagged = stats->out.untagged_pkts;
 	ctx->stats.dev_stats->InPktsUntagged = stats->in.untagged_pkts;
 	ctx->stats.dev_stats->OutPktsTooLong = stats->out.too_long;
@@ -1359,15 +1274,13 @@ static int atl_mdo_get_tx_sc_stats(struct macsec_context *ctx)
 	if (txsc_idx < 0)
 		return -ENOENT;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	stats = &atl_txsc->stats;
 	atl_get_txsc_stats(hw, atl_txsc->hw_sc_idx, &atl_txsc->stats);
 
+	/* CHECKPATCH FALSE POSITIVE: These field names are defined by Linux
+	 * kernel MACsec API and must match the standard structure field names.
+	 */
 	ctx->stats.tx_sc_stats->OutPktsProtected = stats->sc_protected_pkts;
 	ctx->stats.tx_sc_stats->OutPktsEncrypted = stats->sc_encrypted_pkts;
 	ctx->stats.tx_sc_stats->OutOctetsProtected = stats->sc_protected_octets;
@@ -1392,11 +1305,6 @@ static int atl_mdo_get_tx_sa_stats(struct macsec_context *ctx)
 	txsc_idx = atl_get_txsc_idx_from_secy(hw, ctx->secy);
 	if (txsc_idx < 0)
 		return -EINVAL;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 	sa_idx = atl_txsc->hw_sc_idx | ctx->sa.assoc_num;
@@ -1435,11 +1343,6 @@ static int atl_mdo_get_rx_sc_stats(struct macsec_context *ctx)
 	if (rxsc_idx < 0)
 		return -ENOENT;
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
-
 	atl_rxsc = &hw->macsec_cfg.atl_rxsc[rxsc_idx];
 	for (i = 0; i < MACSEC_NUM_AN; i++) {
 		if (!test_bit(i, &atl_rxsc->rx_sa_idx_busy))
@@ -1451,6 +1354,9 @@ static int atl_mdo_get_rx_sc_stats(struct macsec_context *ctx)
 		if (ret)
 			break;
 
+		/* CHECKPATCH FALSE POSITIVE: These field names are defined by Linux
+		 * kernel MACsec API and must match the standard structure field names.
+		 */
 		ctx->stats.rx_sc_stats->InOctetsValidated +=
 			stats->validated_octets;
 		ctx->stats.rx_sc_stats->InOctetsDecrypted +=
@@ -1484,11 +1390,6 @@ static int atl_mdo_get_rx_sa_stats(struct macsec_context *ctx)
 	rxsc_idx = atl_get_rxsc_idx_from_rxsc(hw, ctx->rx_sc);
 	if (rxsc_idx < 0)
 		return -EINVAL;
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 6))
-	if (ctx->prepare)
-		return 0;
-#endif
 
 	atl_rxsc = &hw->macsec_cfg.atl_rxsc[rxsc_idx];
 	stats = &atl_rxsc->rx_sa_stats[ctx->sa.assoc_num];
@@ -1720,8 +1621,8 @@ static void atl_check_txsa_expiration(struct atl_nic *nic)
 	if (unlikely(ret))
 		return;
 
-	ret = aq_mss_get_egress_sa_threshold_expired(
-		hw, &egress_sa_threshold_expired);
+	ret = aq_mss_get_egress_sa_threshold_expired(hw,
+						     &egress_sa_threshold_expired);
 
 	for (i = 0; i < ATL_MACSEC_MAX_SA; i++) {
 		if (egress_sa_expired & BIT(i)) {
@@ -1733,24 +1634,21 @@ static void atl_check_txsa_expiration(struct atl_nic *nic)
 
 			atl_txsc = &hw->macsec_cfg.atl_txsc[txsc_idx];
 			if (!(hw->macsec_cfg.txsc_idx_busy & BIT(txsc_idx))) {
-				netdev_warn(
-					nic->ndev,
-					"PN threshold expired on invalid TX SC");
+				netdev_warn(nic->ndev,
+					    "PN threshold expired on invalid TX SC");
 				continue;
 			}
 
 			secy = atl_txsc->sw_secy;
 			if (!netif_running(secy->netdev)) {
-				netdev_warn(
-					nic->ndev,
-					"PN threshold expired on down TX SC");
+				netdev_warn(nic->ndev,
+					    "PN threshold expired on down TX SC");
 				continue;
 			}
 
 			if (unlikely(!(atl_txsc->tx_sa_idx_busy & BIT(an)))) {
-				netdev_warn(
-					nic->ndev,
-					"PN threshold expired on invalid TX SA");
+				netdev_warn(nic->ndev,
+					    "PN threshold expired on invalid TX SA");
 				continue;
 			}
 
@@ -1761,8 +1659,8 @@ static void atl_check_txsa_expiration(struct atl_nic *nic)
 
 	aq_mss_set_egress_sa_expired(hw, egress_sa_expired);
 	if (likely(!ret))
-		aq_mss_set_egress_sa_threshold_expired(
-			hw, egress_sa_threshold_expired);
+		aq_mss_set_egress_sa_threshold_expired(hw,
+						       egress_sa_threshold_expired);
 }
 
 void atl_macsec_work(struct atl_nic *nic)
