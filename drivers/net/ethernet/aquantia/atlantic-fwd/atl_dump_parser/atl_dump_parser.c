@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
+// SPDX-License-Identifier: GPL-2.0-only
 /* Atlantic Network Driver
  *
  * Copyright (C) 2021 Marvell International Ltd.
@@ -38,7 +38,7 @@ int dump_device_info(struct atl_crash_dump *crash_dump)
 
 	snprintf(file_name, 64, "%s/%s", out_folder, DEV_FILE);
 	file = fopen(file_name, "w");
-	if (file == NULL) {
+	if (!file) {
 		printf("Error opening file %s\n", file_name);
 		return -1;
 	}
@@ -53,13 +53,13 @@ int dump_device_info(struct atl_crash_dump *crash_dump)
 
 int dump_registers(struct atl_crash_dump_regs *reg)
 {
-	int block = 0x1000/4, i, offset;
+	int block = 0x1000 / 4, i, offset;
 	char file_name[64];
 	FILE *file;
 
 	snprintf(file_name, 64, "%s/%s", out_folder, REG_FILE);
 	file = fopen(file_name, "w");
-	if (file == NULL) {
+	if (!file) {
 		printf("Error opening file %s\n", file_name);
 		return -1;
 	}
@@ -111,13 +111,13 @@ int dump_registers(struct atl_crash_dump_regs *reg)
 
 int dump_fwiface(struct atl_crash_dump_fwiface *fwiface)
 {
-	int block =  0x1000/4, i;
+	int block = 0x1000 / 4, i;
 	char file_name[64];
 	FILE *file;
 
 	snprintf(file_name, 64, "%s/%s", out_folder, FW_IFACE_FILE);
 	file = fopen(file_name, "w");
-	if (file == NULL) {
+	if (!file) {
 		printf("Error opening file %s\n", file_name);
 		return -1;
 	}
@@ -149,7 +149,7 @@ int dump_act_res(struct atl_crash_dump_act_res *act_res)
 
 	snprintf(file_name, 64, "%s/%s", out_folder, ACT_RES_FILE);
 	file = fopen(file_name, "w");
-	if (file == NULL) {
+	if (!file) {
 		printf("Error opening file %s\n", file_name);
 		return -1;
 	}
@@ -176,7 +176,7 @@ int dump_ring(struct atl_crash_dump_ring *ring)
 	/* Assumption - file 'rings.txt' shouldn't exists */
 	snprintf(file_name, 64, "%s/%s", out_folder, RING_FILE);
 	file = fopen(file_name, "a+");
-	if (file == NULL) {
+	if (!file) {
 		printf("Error opening file %s\n", file_name);
 		return -1;
 	}
@@ -185,7 +185,8 @@ int dump_ring(struct atl_crash_dump_ring *ring)
 	fprintf(file, "==============\n");
 	fprintf(file, "Rx head = 0x%08x tail = 0x%08x\n", ring->rx_head, ring->rx_tail);
 	fprintf(file, "Tx head = 0x%08x tail = 0x%08x\n", ring->tx_head, ring->tx_tail);
-	fprintf(file, "HW Ring rx_size = %d tx_size = %d\n", ring->rx_ring_size, ring->tx_ring_size);
+	fprintf(file, "HW Ring rx_size = %d tx_size = %d\n",
+		ring->rx_ring_size, ring->tx_ring_size);
 	fprintf(file, "Rx Ring descriptor:\n");
 	fprintf(file, "-------------------\n");
 	data = (u32 *)ring->ring_data;
@@ -203,7 +204,6 @@ int dump_ring(struct atl_crash_dump_ring *ring)
 	fclose(file);
 
 	return 0;
-
 }
 
 int main(int argc, char *argv[])
@@ -233,8 +233,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	/* open the source file for reading */
-	input_file = fopen(argv[1],"rb");
-	if (input_file == NULL) {
+	input_file = fopen(argv[1], "rb");
+	if (!input_file) {
 		ret = -1;
 		printf("Error opening file %s\n", argv[1]);
 		goto err;
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 	tm_val = NULL;
 	if (tm_val)
 		snprintf(out_folder, 64, "%s_%02d-%02d-%02d_%02d-%02d-%02d", argv[1],
-			 tm_val->tm_mon + 1, (int) tm_val->tm_mday, 1900 +  tm_val->tm_year,
+			 tm_val->tm_mon + 1, (int)tm_val->tm_mday, 1900 + tm_val->tm_year,
 			 tm_val->tm_hour,  tm_val->tm_min,  tm_val->tm_sec);
 	else
 		snprintf(out_folder, 64, "%s_parsed", argv[1]);
