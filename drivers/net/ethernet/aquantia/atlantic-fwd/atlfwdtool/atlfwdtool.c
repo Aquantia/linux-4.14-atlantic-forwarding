@@ -41,6 +41,7 @@ static const char *cmd_str[NUM_ATL_FWD_CMD] = {
 	ATL_FWD_CMD_STR(ATL_FWD_CMD_GET_RX_QUEUE),
 	ATL_FWD_CMD_STR(ATL_FWD_CMD_GET_TX_QUEUE),
 };
+
 #define ATL_FWD_ATTR_STR(attr)\
 [attr] = #attr
 static const char *attr_str[NUM_ATL_FWD_ATTR] = {
@@ -268,7 +269,7 @@ static int atlnl_cmd_generic_u32_args(struct nl_context *ctx,
 		printf("calling %s\n",
 		       cmd_str[cmd] ? cmd_str[cmd] : "unknown command");
 
-	if (ctx->devname != NULL)
+	if (ctx->devname)
 		mnl_attr_put_strz(ctx->nlhdr, ATL_FWD_ATTR_IFNAME,
 				  ctx->devname);
 
@@ -276,7 +277,7 @@ static int atlnl_cmd_generic_u32_args(struct nl_context *ctx,
 	for (i = 0; i != attr_count; i++) {
 		const enum atlfwd_nl_attribute attr =
 			va_arg(args, enum atlfwd_nl_attribute);
-		const uint32_t value = va_arg(args, uint32_t);
+		const u32 value = va_arg(args, u32);
 
 		mnl_attr_put_u32(ctx->nlhdr, attr, value);
 
@@ -321,8 +322,9 @@ int main(int argc, char **argv)
 #ifdef NETLINK_EXT_ACK
 	/* request extended acknowledgment */
 	unsigned int true_val = 1;
+
 	ret = mnl_socket_setsockopt(nlctx.sock, NETLINK_EXT_ACK, &true_val,
-					sizeof(true_val));
+				    sizeof(true_val));
 	if (ret < 0)
 		goto err_sockclose;
 #endif
@@ -346,52 +348,50 @@ int main(int argc, char **argv)
 	/* process command(s) */
 	switch (args->cmd) {
 	case ATL_FWD_CMD_REQUEST_RING:
-		ret = atlnl_cmd_generic_u32_args(
-			&nlctx, args->cmd, atlnl_reqring_cb, 4,
-			ATL_FWD_ATTR_FLAGS, args->flags, ATL_FWD_ATTR_RING_SIZE,
-			args->ring_size, ATL_FWD_ATTR_BUF_SIZE, args->buf_size,
-			ATL_FWD_ATTR_PAGE_ORDER, args->page_order);
+		ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd, atlnl_reqring_cb, 4,
+						 ATL_FWD_ATTR_FLAGS, args->flags,
+						 ATL_FWD_ATTR_RING_SIZE, args->ring_size,
+						 ATL_FWD_ATTR_BUF_SIZE, args->buf_size,
+						 ATL_FWD_ATTR_PAGE_ORDER, args->page_order);
 		break;
 	case ATL_FWD_CMD_RELEASE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_ENABLE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DISABLE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DUMP_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_REQUEST_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_RELEASE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_ENABLE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DISABLE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_FORCE_ICMP_TX_VIA:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_FORCE_TX_VIA:
 		ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd, NULL, 1,
 						 ATL_FWD_ATTR_RING_INDEX,
-						 (uint32_t)args->ring_index);
+						 (u32)args->ring_index);
 		break;
 	case ATL_FWD_CMD_GET_RX_QUEUE:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_GET_TX_QUEUE:
 		ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd,
 						 atlnl_getqueue_cb, 1,
 						 ATL_FWD_ATTR_RING_INDEX,
-						 (uint32_t)args->ring_index);
+						 (u32)args->ring_index);
 		break;
 	case ATL_FWD_CMD_RING_STATUS:
 		if (args->ring_index < 0)
-			ret = atlnl_cmd_generic_u32_args(
-				&nlctx, args->cmd, atlnl_ringstatus_cb, 0);
+			ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd, atlnl_ringstatus_cb, 0);
 		else
-			ret = atlnl_cmd_generic_u32_args(
-				&nlctx, args->cmd, atlnl_ringstatus_cb, 1,
-				ATL_FWD_ATTR_RING_INDEX,
-				(uint32_t)args->ring_index);
+			ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd, atlnl_ringstatus_cb, 1,
+							 ATL_FWD_ATTR_RING_INDEX,
+							 (u32)args->ring_index);
 		break;
 	case ATL_FWD_CMD_DISABLE_REDIRECTIONS:
 		ret = atlnl_cmd_generic_u32_args(&nlctx, args->cmd, NULL, 0);
