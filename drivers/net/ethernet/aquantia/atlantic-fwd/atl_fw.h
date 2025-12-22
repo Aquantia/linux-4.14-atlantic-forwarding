@@ -20,30 +20,30 @@ struct atl_hw;
 struct atl_nic;
 
 struct atl_mcp {
-	uint32_t fw_rev;
+	u32 fw_rev;
 	struct atl_fw_ops *ops;
-	uint32_t fw_stat_addr;
-	uint32_t rpc_addr;
-	uint32_t fw_settings_addr;
-	uint32_t fw_settings_len;
-	uint32_t req_high;
-	uint32_t req_high_mask;	/* Clears link rate-dependend bits */
-	uint32_t caps_low;
-	uint32_t caps_high;
-	uint32_t caps_ex;
-	uint32_t interface_ver;
-	struct mutex lock;
+	u32 fw_stat_addr;
+	u32 rpc_addr;
+	u32 fw_settings_addr;
+	u32 fw_settings_len;
+	u32 req_high;
+	u32 req_high_mask;	/* Clears link rate-dependend bits */
+	u32 caps_low;
+	u32 caps_high;
+	u32 caps_ex;
+	u32 interface_ver;
+	struct mutex lock;	/* Protects MCP firmware operations */
 	unsigned long next_wdog;
 	bool wdog_disabled;
-	uint16_t phy_hbeat;
-	uint32_t *fw_cfg_dump;
+	u16 phy_hbeat;
+	u32 *fw_cfg_dump;
 };
 
 struct atl_link_type {
-	unsigned speed;
+	unsigned int speed;
 	bool duplex;
-	unsigned ethtool_idx;
-	uint32_t fw_bits[2];
+	unsigned int ethtool_idx;
+	u32 fw_bits[2];
 	const char *name;
 };
 
@@ -63,51 +63,64 @@ extern struct atl_link_type atl_link_types[];
 extern const int atl_num_rates;
 
 struct atl_fw2_thermal_cfg {
-	uint32_t msg_id;
-	uint8_t shutdown_temp;
-	uint8_t high_temp;
-	uint8_t normal_temp;
+	u32 msg_id;
+	u8 shutdown_temp;
+	u8 high_temp;
+	u8 normal_temp;
 };
 
-#define atl_for_each_rate(idx, type)		\
-	for (idx = 0, type = atl_link_types;	\
-	     idx < atl_num_rates;		\
-	     idx++, type++)
-
-#define atl_define_bit(_name, _bit)		\
-	_name ## _shift = (_bit),		\
-	_name = BIT(_name ## _shift),
-
 enum atl_fw2_opts {
-	atl_define_bit(atl_fw2_pause, 3)
-	atl_define_bit(atl_fw2_asym_pause, 4)
+	atl_fw2_pause_shift = 3,
+	atl_fw2_pause = BIT(atl_fw2_pause_shift),
+	atl_fw2_asym_pause_shift = 4,
+	atl_fw2_asym_pause = BIT(atl_fw2_asym_pause_shift),
 	atl_fw2_pause_mask = atl_fw2_pause | atl_fw2_asym_pause,
-	atl_define_bit(atl_fw2_fw_request, 12)
-	atl_define_bit(atl_fw2_macsec, 15)
-	atl_define_bit(atl_fw2_wake_on_link, 16)
-	atl_define_bit(atl_fw2_wake_on_link_force, 17)
-	atl_define_bit(atl_fw2_phy_temp, 18)
-	atl_define_bit(atl_fw2_downshift, 19)
-	atl_define_bit(atl_fw2_set_thermal, 21)
-	atl_define_bit(atl_fw2_link_drop, 22)
-	atl_define_bit(atl_fw2_nic_proxy, 0x17)
-	atl_define_bit(atl_fw2_wol, 0x18)
-	atl_define_bit(atl_fw2_thermal_alarm, 29)
-	atl_define_bit(atl_fw2_statistics, 30)
+	atl_fw2_fw_request_shift = 12,
+	atl_fw2_fw_request = BIT(atl_fw2_fw_request_shift),
+	atl_fw2_macsec_shift = 15,
+	atl_fw2_macsec = BIT(atl_fw2_macsec_shift),
+	atl_fw2_wake_on_link_shift = 16,
+	atl_fw2_wake_on_link = BIT(atl_fw2_wake_on_link_shift),
+	atl_fw2_wake_on_link_force_shift = 17,
+	atl_fw2_wake_on_link_force = BIT(atl_fw2_wake_on_link_force_shift),
+	atl_fw2_phy_temp_shift = 18,
+	atl_fw2_phy_temp = BIT(atl_fw2_phy_temp_shift),
+	atl_fw2_downshift_shift = 19,
+	atl_fw2_downshift = BIT(atl_fw2_downshift_shift),
+	atl_fw2_set_thermal_shift = 21,
+	atl_fw2_set_thermal = BIT(atl_fw2_set_thermal_shift),
+	atl_fw2_link_drop_shift = 22,
+	atl_fw2_link_drop = BIT(atl_fw2_link_drop_shift),
+	atl_fw2_nic_proxy_shift = 0x17,
+	atl_fw2_nic_proxy = BIT(atl_fw2_nic_proxy_shift),
+	atl_fw2_wol_shift = 0x18,
+	atl_fw2_wol = BIT(atl_fw2_wol_shift),
+	atl_fw2_thermal_alarm_shift = 29,
+	atl_fw2_thermal_alarm = BIT(atl_fw2_thermal_alarm_shift),
+	atl_fw2_statistics_shift = 30,
+	atl_fw2_statistics = BIT(atl_fw2_statistics_shift),
 };
 
 enum atl_fw2_ex_caps {
-	atl_define_bit(atl_fw2_ex_caps_phy_ptp_en, 16)
-	atl_define_bit(atl_fw2_ex_caps_ptp_gpio_en, 20)
-	atl_define_bit(atl_fw2_ex_caps_phy_ctrl_ts_pin, 22)
-	atl_define_bit(atl_fw2_ex_caps_wol_ex, 23)
-	atl_define_bit(atl_fw2_ex_caps_mac_heartbeat, 25)
-	atl_define_bit(atl_fw2_ex_caps_msm_settings_apply, 26)
+	atl_fw2_ex_caps_phy_ptp_en_shift = 16,
+	atl_fw2_ex_caps_phy_ptp_en = BIT(atl_fw2_ex_caps_phy_ptp_en_shift),
+	atl_fw2_ex_caps_ptp_gpio_en_shift = 20,
+	atl_fw2_ex_caps_ptp_gpio_en = BIT(atl_fw2_ex_caps_ptp_gpio_en_shift),
+	atl_fw2_ex_caps_phy_ctrl_ts_pin_shift = 22,
+	atl_fw2_ex_caps_phy_ctrl_ts_pin = BIT(atl_fw2_ex_caps_phy_ctrl_ts_pin_shift),
+	atl_fw2_ex_caps_wol_ex_shift = 23,
+	atl_fw2_ex_caps_wol_ex = BIT(atl_fw2_ex_caps_wol_ex_shift),
+	atl_fw2_ex_caps_mac_heartbeat_shift = 25,
+	atl_fw2_ex_caps_mac_heartbeat = BIT(atl_fw2_ex_caps_mac_heartbeat_shift),
+	atl_fw2_ex_caps_msm_settings_apply_shift = 26,
+	atl_fw2_ex_caps_msm_settings_apply = BIT(atl_fw2_ex_caps_msm_settings_apply_shift),
 };
 
 enum atl_fw2_wol_ex {
-	atl_define_bit(atl_fw2_wol_ex_wake_on_link_keep_rate, 0)
-	atl_define_bit(atl_fw2_wol_ex_wake_on_magic_keep_rate, 1)
+	atl_fw2_wol_ex_wake_on_link_keep_rate_shift = 0,
+	atl_fw2_wol_ex_wake_on_link_keep_rate = BIT(atl_fw2_wol_ex_wake_on_link_keep_rate_shift),
+	atl_fw2_wol_ex_wake_on_magic_keep_rate_shift = 1,
+	atl_fw2_wol_ex_wake_on_magic_keep_rate = BIT(atl_fw2_wol_ex_wake_on_magic_keep_rate_shift),
 };
 
 enum atl_fw2_stat_offt {
@@ -128,7 +141,8 @@ enum atl_fw2_settings_offt {
 };
 
 enum atl_fw2_msm_opts {
-	atl_define_bit(atl_fw2_settings_msm_opts_strip_pad, 0)
+	atl_fw2_settings_msm_opts_strip_pad_shift = 0,
+	atl_fw2_settings_msm_opts_strip_pad = BIT(atl_fw2_settings_msm_opts_strip_pad_shift),
 };
 
 enum atl_fw2_fw_request {
@@ -137,15 +151,20 @@ enum atl_fw2_fw_request {
 
 enum atl_fc_mode {
 	atl_fc_none = 0,
-	atl_define_bit(atl_fc_rx, 0)
-	atl_define_bit(atl_fc_tx, 1)
+	atl_fc_rx_shift = 0,
+	atl_fc_rx = BIT(atl_fc_rx_shift),
+	atl_fc_tx_shift = 1,
+	atl_fc_tx = BIT(atl_fc_tx_shift),
 	atl_fc_full = atl_fc_rx | atl_fc_tx,
 };
 
 enum atl_thermal_flags {
-	atl_define_bit(atl_thermal_monitor, 0)
-	atl_define_bit(atl_thermal_throttle, 1)
-	atl_define_bit(atl_thermal_ignore_lims, 2)
+	atl_thermal_monitor_shift = 0,
+	atl_thermal_monitor = BIT(atl_thermal_monitor_shift),
+	atl_thermal_throttle_shift = 1,
+	atl_thermal_throttle = BIT(atl_thermal_throttle_shift),
+	atl_thermal_ignore_lims_shift = 2,
+	atl_thermal_ignore_lims = BIT(atl_thermal_ignore_lims_shift),
 };
 
 struct atl_fc_state {
@@ -163,17 +182,17 @@ enum atl_wake_flags {
 #define ATL_EEE_BIT_OFFT 16
 #define ATL_EEE_MASK ~(BIT(ATL_EEE_BIT_OFFT) - 1)
 
-struct atl_link_state{
+struct atl_link_state {
 	/* The following three bitmaps use alt_link_types[] indices
 	 * as link bit positions. Conversion to/from ethtool bits is
-	 * done in atl_ethtool.c. */
-	unsigned supported;
-	unsigned advertized;
-	unsigned lp_advertized;
-	unsigned prev_advertized;
-	int lp_lowest; 		/* Idx of lowest rate advertized by
-				 * link partner in atl_link_types[] */
-	int throttled_to;	/* Idx of the rate we're throttled to */
+	 * done in atl_ethtool.c.
+	 */
+	unsigned int supported;
+	unsigned int advertized;
+	unsigned int lp_advertized;
+	unsigned int prev_advertized;
+	int lp_lowest;
+	int throttled_to;
 	bool force_off;
 	bool thermal_throttled;
 	bool autoneg;
@@ -295,14 +314,14 @@ struct atl_fw_ops {
 	int (*send_macsec_req)(struct atl_hw *hw,
 			       struct macsec_msg_fw_request *msg,
 			       struct macsec_msg_fw_response *resp);
-	int (*__get_hbeat)(struct atl_hw *hw, uint16_t *hbeat);
-	int (*get_mac_addr)(struct atl_hw *hw, uint8_t *buf);
+	int (*__get_hbeat)(struct atl_hw *hw, u16 *hbeat);
+	int (*get_mac_addr)(struct atl_hw *hw, u8 *buf);
 	int (*update_thermal)(struct atl_hw *hw);
 	int (*send_ptp_req)(struct atl_hw *hw, struct ptp_msg_fw_request *msg);
 	void (*set_ptp)(struct atl_hw *hw, bool on);
 	int (*deinit)(struct atl_hw *hw);
 };
 
-int atl_read_mcp_word(struct atl_hw *hw, uint32_t offt, uint32_t *val);
+int atl_read_mcp_word(struct atl_hw *hw, u32 offt, u32 *val);
 
 #endif
