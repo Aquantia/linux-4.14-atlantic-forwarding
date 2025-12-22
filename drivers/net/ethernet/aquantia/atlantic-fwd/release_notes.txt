@@ -135,7 +135,7 @@ Version 1.1.4
 
 Version 1.1.3
 ==============
-[ATLDRV-1185] - Enable stripping of padding doesnt work on Felicity card
+[ATLDRV-1185] - Enable stripping of padding doesn't work on Felicity card
 [ATLDRV-1351] - Problem with setting mtu
 [ATLDRV-1352] - Implement stripping of padding
 [ATLDRV-1354] - Incorrect thermal thresholds
@@ -143,7 +143,7 @@ Version 1.1.3
 
 Version 1.1.2
 ==============
-[ATLDRV-1348] - FWD: IPv6 and L4 ntuple filters not work 
+[ATLDRV-1348] - FWD: IPv6 and L4 ntuple filters not work
 
 Version 1.1.1
 ==============
@@ -262,7 +262,7 @@ net: aquantia: Re-initialize fwd rings on driver resume
 Do entire suspend from dev_pm_ops->suspend() (AQ052)
 Prevent atl_update_global_stats() calls when suspended (AQ056) (ATLDRV-1021)
 Implement thermal throttling (ATLDRV-1009)
-Add log message when high temperature treshold is reached (ATLDRV-998))
+Add log message when high temperature threshold is reached (ATLDRV-998))
 Implement FW heartbeat watchdog (AQ010) (ATLDRV-502)
 Workaround checksum offload bugs (ATLDRV-1013)
 
