@@ -268,9 +268,9 @@ set_ingress_prectlf_record(struct atl_hw *hw,
 					      table_index);
 }
 
-int aq_mss_set_ingress_prectlf_record(
-	struct atl_hw *hw, const struct aq_mss_ingress_prectlf_record *rec,
-	u16 table_index)
+int aq_mss_set_ingress_prectlf_record(struct atl_hw *hw,
+				      const struct aq_mss_ingress_prectlf_record *rec,
+				       u16 table_index)
 {
 	return AQ_API_CALL_SAFE(set_ingress_prectlf_record, hw, rec,
 				table_index);
@@ -464,9 +464,9 @@ set_ingress_preclass_record(struct atl_hw *hw,
 					      table_index);
 }
 
-int aq_mss_set_ingress_preclass_record(
-	struct atl_hw *hw, const struct aq_mss_ingress_preclass_record *rec,
-	u16 table_index)
+int aq_mss_set_ingress_preclass_record(struct atl_hw *hw,
+				       const struct aq_mss_ingress_preclass_record *rec,
+					u16 table_index)
 {
 	return AQ_API_CALL_SAFE(set_ingress_preclass_record, hw, rec,
 				table_index);
@@ -611,9 +611,9 @@ get_ingress_preclass_record(struct atl_hw *hw,
 	return 0;
 }
 
-int aq_mss_get_ingress_preclass_record(
-	struct atl_hw *hw, struct aq_mss_ingress_preclass_record *rec,
-	u16 table_index)
+int aq_mss_get_ingress_preclass_record(struct atl_hw *hw,
+				       struct aq_mss_ingress_preclass_record *rec,
+					u16 table_index)
 {
 	memset(rec, 0, sizeof(*rec));
 
@@ -923,9 +923,9 @@ set_ingress_sakey_record(struct atl_hw *hw,
 					      table_index);
 }
 
-int aq_mss_set_ingress_sakey_record(
-	struct atl_hw *hw, const struct aq_mss_ingress_sakey_record *rec,
-	u16 table_index)
+int aq_mss_set_ingress_sakey_record(struct atl_hw *hw,
+				    const struct aq_mss_ingress_sakey_record *rec,
+				     u16 table_index)
 {
 	return AQ_API_CALL_SAFE(set_ingress_sakey_record, hw, rec, table_index);
 }
@@ -1114,9 +1114,9 @@ set_ingress_postclass_record(struct atl_hw *hw,
 					      table_index);
 }
 
-int aq_mss_set_ingress_postclass_record(
-	struct atl_hw *hw, const struct aq_mss_ingress_postclass_record *rec,
-	u16 table_index)
+int aq_mss_set_ingress_postclass_record(struct atl_hw *hw,
+					const struct aq_mss_ingress_postclass_record *rec,
+					 u16 table_index)
 {
 	return AQ_API_CALL_SAFE(set_ingress_postclass_record, hw, rec,
 				table_index);
@@ -1249,9 +1249,9 @@ get_ingress_postclass_record(struct atl_hw *hw,
 	return 0;
 }
 
-int aq_mss_get_ingress_postclass_record(
-	struct atl_hw *hw, struct aq_mss_ingress_postclass_record *rec,
-	u16 table_index)
+int aq_mss_get_ingress_postclass_record(struct atl_hw *hw,
+					struct aq_mss_ingress_postclass_record *rec,
+					 u16 table_index)
 {
 	memset(rec, 0, sizeof(*rec));
 
@@ -1296,9 +1296,9 @@ set_ingress_postctlf_record(struct atl_hw *hw,
 					      table_index);
 }
 
-int aq_mss_set_ingress_postctlf_record(
-	struct atl_hw *hw, const struct aq_mss_ingress_postctlf_record *rec,
-	u16 table_index)
+int aq_mss_set_ingress_postctlf_record(struct atl_hw *hw,
+				       const struct aq_mss_ingress_postctlf_record *rec,
+					u16 table_index)
 {
 	return AQ_API_CALL_SAFE(set_ingress_postctlf_record, hw, rec,
 				table_index);
@@ -1355,9 +1355,9 @@ get_ingress_postctlf_record(struct atl_hw *hw,
 	return 0;
 }
 
-int aq_mss_get_ingress_postctlf_record(
-	struct atl_hw *hw, struct aq_mss_ingress_postctlf_record *rec,
-	u16 table_index)
+int aq_mss_get_ingress_postctlf_record(struct atl_hw *hw,
+				       struct aq_mss_ingress_postctlf_record *rec,
+					u16 table_index)
 {
 	memset(rec, 0, sizeof(*rec));
 
@@ -2417,8 +2417,8 @@ get_egress_common_counters(struct atl_hw *hw,
 	return 0;
 }
 
-int aq_mss_get_egress_common_counters(
-	struct atl_hw *hw, struct aq_mss_egress_common_counters *counters)
+int aq_mss_get_egress_common_counters(struct atl_hw *hw,
+				      struct aq_mss_egress_common_counters *counters)
 {
 	memset(counters, 0, sizeof(*counters));
 
@@ -2737,8 +2737,8 @@ get_ingress_common_counters(struct atl_hw *hw,
 	return 0;
 }
 
-int aq_mss_get_ingress_common_counters(
-	struct atl_hw *hw, struct aq_mss_ingress_common_counters *counters)
+int aq_mss_get_ingress_common_counters(struct atl_hw *hw,
+				       struct aq_mss_ingress_common_counters *counters)
 {
 	memset(counters, 0, sizeof(*counters));
 
@@ -2843,17 +2843,15 @@ static int get_egress_sa_threshold_expired(struct atl_hw *hw, u32 *expired)
 	u16 val;
 	int ret;
 
-	ret = __atl_mdio_read(
-		hw, 0, MDIO_MMD_VEND1,
-		MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR, &val);
+	ret = __atl_mdio_read(hw, 0, MDIO_MMD_VEND1,
+			      MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR, &val);
 	if (unlikely(ret))
 		return ret;
 
 	*expired = val;
 
-	ret = __atl_mdio_read(
-		hw, 0, MDIO_MMD_VEND1,
-		MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR + 1, &val);
+	ret = __atl_mdio_read(hw, 0, MDIO_MMD_VEND1,
+			      MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR + 1, &val);
 	if (unlikely(ret))
 		return ret;
 
@@ -2897,17 +2895,15 @@ static int set_egress_sa_threshold_expired(struct atl_hw *hw, u32 expired)
 {
 	int ret;
 
-	ret = __atl_mdio_write(
-		hw, 0, MDIO_MMD_VEND1,
-		MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR,
-		expired & 0xFFFF);
+	ret = __atl_mdio_write(hw, 0, MDIO_MMD_VEND1,
+			       MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR,
+			       expired & 0xFFFF);
 	if (unlikely(ret))
 		return ret;
 
-	ret = __atl_mdio_write(
-		hw, 0, MDIO_MMD_VEND1,
-		MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR + 1,
-		expired >> 16);
+	ret = __atl_mdio_write(hw, 0, MDIO_MMD_VEND1,
+			       MSS_EGRESS_SA_THRESHOLD_EXPIRED_STATUS_REGISTER_ADDR + 1,
+			       expired >> 16);
 	if (unlikely(ret))
 		return ret;
 
@@ -2918,7 +2914,6 @@ int aq_mss_set_egress_sa_threshold_expired(struct atl_hw *hw, u32 expired)
 {
 	return AQ_API_CALL_SAFE(set_egress_sa_threshold_expired, hw, expired);
 }
-
 
 static int set_drop_igprc_miss_packets(struct atl_hw *hw, bool drop)
 {
