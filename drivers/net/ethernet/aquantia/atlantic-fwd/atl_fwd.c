@@ -64,7 +64,7 @@ static int atl_fwd_ring_tx(struct atl_fwd_ring *ring)
 }
 
 static void *atl_fwd_frag_vaddr(struct atl_fwd_buf_frag *frag,
-	struct atl_fwd_mem_ops *ops)
+				struct atl_fwd_mem_ops *ops)
 {
 	if (ops->alloc_buf)
 		return frag->buf;
@@ -89,8 +89,9 @@ static int atl_fwd_get_frag(struct atl_fwd_ring *ring, int idx)
 			frag->buf = buf;
 			frag->daddr = daddr;
 			return 0;
-		} else
+		} else {
 			return PTR_ERR(buf);
+		}
 	}
 
 	pg = __dev_alloc_pages(GFP_KERNEL, bufs->order);
@@ -99,7 +100,7 @@ static int atl_fwd_get_frag(struct atl_fwd_ring *ring, int idx)
 
 	if (!(ring->flags & ATL_FWR_DONT_DMA_MAP)) {
 		daddr = dma_map_page(dev, pg, 0, PAGE_SIZE << bufs->order,
-			DMA_FROM_DEVICE);
+				     DMA_FROM_DEVICE);
 
 		if (dma_mapping_error(dev, daddr)) {
 			__free_pages(pg, bufs->order);
@@ -132,7 +133,7 @@ static void atl_fwd_free_bufs(struct atl_fwd_ring *ring)
 
 	if (bufs->daddr_vec)
 		dma_free_coherent(dev, ring_size * sizeof(dma_addr_t),
-			bufs->daddr_vec, bufs->daddr_vec_base);
+				  bufs->daddr_vec, bufs->daddr_vec_base);
 
 	if (ring->flags & ATL_FWR_WANT_VIRT_BUF_VEC)
 		kfree(bufs->vaddr_vec);
@@ -150,7 +151,7 @@ static void atl_fwd_free_bufs(struct atl_fwd_ring *ring)
 		if (frag->page) {
 			if (!(ring->flags & ATL_FWR_DONT_DMA_MAP))
 				dma_unmap_page(dev, frag->daddr,
-					PAGE_SIZE << order,
+					       PAGE_SIZE << order,
 					DMA_FROM_DEVICE);
 			__free_pages(frag->page, order);
 		}
@@ -210,7 +211,7 @@ static int atl_fwd_alloc_bufs(struct atl_fwd_ring *ring, int order)
 		ret = atl_fwd_get_frag(ring, i);
 		if (ret) {
 			atl_nic_err("%s: couldn't alloc buffer page (order %d)\n",
-				__func__, order);
+				    __func__, order);
 			goto free;
 		}
 	}
@@ -220,27 +221,26 @@ static int atl_fwd_alloc_bufs(struct atl_fwd_ring *ring, int order)
 	if (want_dvec) {
 		ret = -ENOMEM;
 		bufs->daddr_vec = dma_alloc_coherent(dev,
-			ring_size * sizeof(dma_addr_t),
+						     ring_size * sizeof(dma_addr_t),
 			&bufs->daddr_vec_base, GFP_KERNEL);
 		if (!bufs->daddr_vec) {
 			atl_nic_err("%s: couldn't alloc DMA addr table\n",
-				__func__);
+				    __func__);
 			goto free;
 		}
-	} else
+	} else {
 		bufs->daddr_vec_base = frag[0].daddr;
+	}
 
 	if (want_vvec) {
 		ret = -ENOMEM;
 		bufs->vaddr_vec = kcalloc(ring_size, sizeof(void *),
-			GFP_KERNEL);
-		if (!bufs->vaddr_vec) {
-			atl_nic_err("%s: couldn't alloc virtual addr table\n",
-				__func__);
+					  GFP_KERNEL);
+		if (!bufs->vaddr_vec)
 			goto free;
-		}
-	} else
+	} else {
 		bufs->vaddr_vec = atl_fwd_frag_vaddr(frag, ops);
+	}
 
 	if (!(want_dvec || want_vvec))
 		return 0;
@@ -273,7 +273,7 @@ static void atl_fwd_update_im(struct atl_fwd_ring *ring)
 {
 	struct atl_hw *hw = &ring->nic->hw;
 	int idx = ring->idx;
-	uint32_t addr, tx_reg;
+	u32 addr, tx_reg;
 
 	if (hw->chip_id == ATL_ANTIGUA)
 		tx_reg = ATL2_TX_INTR_MOD_CTRL(idx);
@@ -312,8 +312,9 @@ static void atl_fwd_init_descr(struct atl_fwd_ring *fwd_ring)
 
 			if (dir_tx) {
 				/* init both daddr and dd for both cases:
-				* daddr for head pointer writeback
-				* dd for the descriptor writeback */
+				 * daddr for head pointer writeback
+				 * dd for the descriptor writeback
+				 */
 				desc->tx.daddr = daddr;
 				desc->tx.dd = 1;
 			} else {
@@ -347,24 +348,24 @@ static void atl_fwd_init_ring(struct atl_fwd_ring *fwd_ring)
 
 	if (dir_tx) {
 		atl_write(hw, ATL_TX_RING_THRESH(ring),
-			8 << 8 | 8 << 0x10 | 24 << 0x18);
+			  8 << 8 | 8 << 0x10 | 24 << 0x18);
 		atl_write(hw, ATL_TX_RING_CTL(ring), ring->size);
 
 		atl_write_bit(hw, ATL_TX_LSO_CTRL, idx, lxo_bit);
 	} else {
-		uint32_t ctrl = ring->size |
+		u32 ctrl = ring->size |
 			!!(flags & ATL_FWR_VLAN) << 29;
 
 		atl_write(hw, ATL_RX_RING_BUF_SIZE(ring),
-			fwd_ring->buf_size / 1024);
+			  fwd_ring->buf_size / 1024);
 		atl_write(hw, ATL_RX_RING_THRESH(ring),
-			8 << 0x10 | 24 << 0x18);
+			  8 << 0x10 | 24 << 0x18);
 		atl_write(hw, ATL_RX_RING_TAIL(ring), ring->size - 1);
 		atl_write(hw, ATL_RX_RING_CTL(ring), ctrl);
 
 		if (lxo_bit)
 			atl_write_bits(hw, ATL_RX_LRO_PKT_LIM(idx),
-				(idx & 7) * 4, 2, 3);
+				       (idx & 7) * 4, 2, 3);
 
 		atl_write_bit(hw, ATL_RX_LRO_CTRL1, idx, lxo_bit);
 		atl_write_bit(hw, ATL_INTR_RSC_EN, idx, lxo_bit);
@@ -417,7 +418,7 @@ atl_module_param(fwd_tx_mod_min, uint, 0644);
 static struct atl_fwd_mem_ops null_ops;
 
 struct atl_fwd_ring *atl_fwd_request_ring(struct net_device *ndev,
-	int flags, int ring_size, int buf_size, int page_order,
+					  int flags, int ring_size, int buf_size, int page_order,
 	struct atl_fwd_mem_ops *ops)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
@@ -432,13 +433,13 @@ struct atl_fwd_ring *atl_fwd_request_ring(struct net_device *ndev,
 
 	if (ring_size & 7 || ring_size > ATL_MAX_RING_SIZE) {
 		atl_nic_err("%s: bad ring size %d, must be no more than %d and a multiple of 8\n",
-			__func__, ring_size, ATL_MAX_RING_SIZE);
+			    __func__, ring_size, ATL_MAX_RING_SIZE);
 		return ERR_PTR(-EINVAL);
 	}
 
 	if (buf_size & 1023 || buf_size > 16 * 1024) {
 		atl_nic_err("%s: bad buffer size %d, must be no more than 16k and a multiple of 1024\n",
-			__func__, buf_size);
+			    __func__, buf_size);
 		return ERR_PTR(-EINVAL);
 	}
 
@@ -446,38 +447,36 @@ struct atl_fwd_ring *atl_fwd_request_ring(struct net_device *ndev,
 		ops = &null_ops;
 
 	if ((ops->alloc_buf && !ops->free_buf) ||
-		(ops->free_buf && !ops->alloc_buf)) {
+	    (ops->free_buf && !ops->alloc_buf)) {
 		atl_nic_err("%s: must provide either both buffer allocator and deallocator or none\n",
-			__func__);
+			    __func__);
 		return ERR_PTR(-EINVAL);
 	}
 
 	if ((ops->alloc_descs && !ops->free_descs) ||
-		(ops->free_descs && !ops->alloc_descs)) {
+	    (ops->free_descs && !ops->alloc_descs)) {
 		atl_nic_err("%s: must provide either both descriptor ring allocator and deallocator or none\n",
-			__func__);
+			    __func__);
 		return ERR_PTR(-EINVAL);
 	}
 
 	if ((flags & (ATL_FWR_WANT_DMA_BUF_VEC | ATL_FWR_DONT_DMA_MAP)) ==
 		(ATL_FWR_WANT_DMA_BUF_VEC | ATL_FWR_DONT_DMA_MAP)) {
 		atl_nic_err("%s: ATL_FWR_WANT_DMA_BUF_VEC and ATL_FWR_DONT_DMA_MAP flags are mutually exclusive\n",
-			__func__);
+			    __func__);
 		return ERR_PTR(-EINVAL);
 	}
 
 	idx = find_next_zero_bit(map, ATL_FWD_RING_BASE + ATL_NUM_FWD_RINGS,
-		ATL_FWD_RING_BASE);
+				 ATL_FWD_RING_BASE);
 	if (idx >= ATL_FWD_RING_BASE + ATL_NUM_FWD_RINGS) {
 		atl_nic_err("%s: no more rings available\n", __func__);
 		return ERR_PTR(ret);
 	}
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
-	if (!ring) {
-		atl_nic_err("%s: couldn't alloc ring structure\n", __func__);
+	if (!ring)
 		return ERR_PTR(ret);
-	}
 
 	ring->nic = nic;
 	ring->idx = idx;
@@ -498,10 +497,12 @@ struct atl_fwd_ring *atl_fwd_request_ring(struct net_device *ndev,
 			hwring->descs = descs;
 			hwring->daddr = daddr;
 			ret = 0;
-		} else
+		} else {
 			ret = PTR_ERR(descs);
-	} else
+		}
+	} else {
 		ret = atl_alloc_descs(nic, hwring, 0);
+	}
 
 	if (ret) {
 		atl_nic_err("%s: couldn't alloc the ring\n", __func__);
@@ -545,19 +546,20 @@ EXPORT_SYMBOL(atl_fwd_request_ring);
 int atl_fwd_set_ring_intr_mod(struct atl_fwd_ring *ring, int min, int max)
 {
 	struct atl_nic *nic = ring->nic;
+
 	if (atl_fwd_ring_tx(ring) && ring->evt &&
-		ring->evt->flags & ATL_FWD_EVT_TXWB) {
+	    ring->evt->flags & ATL_FWD_EVT_TXWB) {
 		struct atl_nic *nic = ring->nic;
 
 		atl_nic_err("%s: Interrupt moderation not supported for head pointer writeback events\n",
-			__func__);
+			    __func__);
 		return -EINVAL;
 	}
 
 	if (min >= 0) {
 		if (min > 511) {
 			atl_nic_err("%s: min delay out of range (0..511): %d\n",
-				__func__, min);
+				    __func__, min);
 			return -EINVAL;
 		}
 		ring->intr_mod_min = min;
@@ -566,7 +568,7 @@ int atl_fwd_set_ring_intr_mod(struct atl_fwd_ring *ring, int min, int max)
 	if (max >= 0) {
 		if (max > 1023) {
 			atl_nic_err("%s: max delay out of range (0..1023): %d\n",
-				__func__, max);
+				    __func__, max);
 			return -EINVAL;
 		}
 		ring->intr_mod_max = max;
@@ -622,22 +624,16 @@ static void __iomem *atl_msix_bar(struct atl_nic *nic)
 	if (!pdev->msix_enabled)
 		return NULL;
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 16, 20)
 	msi = msi_first_desc(&pdev->dev, MSI_DESC_ALL);
 	return msi->pci.mask_base;
-#else
-	msi = list_first_entry(dev_to_msi_list(&pdev->dev),
-	struct msi_desc, list);
-	return msi->mask_base;
-#endif
 }
 
 static int atl_fwd_set_msix_vec(struct atl_nic *nic, struct atl_fwd_event *evt)
 {
 	int idx = evt->idx;
-	uint64_t addr = evt->msi_addr;
-	uint32_t data = evt->msi_data;
-	uint32_t ctrl;
+	u64 addr = evt->msi_addr;
+	u32 data = evt->msi_data;
+	u32 ctrl;
 	void __iomem *desc = atl_msix_bar(nic);
 
 	if (!desc)
@@ -648,7 +644,7 @@ static int atl_fwd_set_msix_vec(struct atl_nic *nic, struct atl_fwd_event *evt)
 	/* MSI-X table updates must be atomic, so mask first */
 	ctrl = readl(desc + PCI_MSIX_ENTRY_VECTOR_CTRL);
 	writel(ctrl | PCI_MSIX_ENTRY_CTRL_MASKBIT,
-		desc + PCI_MSIX_ENTRY_VECTOR_CTRL);
+	       desc + PCI_MSIX_ENTRY_VECTOR_CTRL);
 
 	/* Program the vector */
 	writel(addr & (BIT_ULL(32) - 1), desc + PCI_MSIX_ENTRY_LOWER_ADDR);
@@ -657,7 +653,7 @@ static int atl_fwd_set_msix_vec(struct atl_nic *nic, struct atl_fwd_event *evt)
 
 	/* Unmask */
 	writel(ctrl & ~PCI_MSIX_ENTRY_CTRL_MASKBIT,
-		desc + PCI_MSIX_ENTRY_VECTOR_CTRL);
+	       desc + PCI_MSIX_ENTRY_VECTOR_CTRL);
 
 	return 0;
 }
@@ -683,7 +679,7 @@ void atl_fwd_release_event(struct atl_fwd_event *evt)
 
 	__clear_bit(idx, map);
 	atl_set_intr_bits(&nic->hw, ring->idx,
-		atl_fwd_ring_tx(ring) ? -1 : ATL_NUM_MSI_VECS,
+			  atl_fwd_ring_tx(ring) ? -1 : ATL_NUM_MSI_VECS,
 		atl_fwd_ring_tx(ring) ? ATL_NUM_MSI_VECS : -1);
 }
 EXPORT_SYMBOL(atl_fwd_release_event);
@@ -736,7 +732,7 @@ int atl_fwd_request_event(struct atl_fwd_event *evt)
 
 	if (ring->evt) {
 		atl_nic_err("%s: event already set for %s ring %d\n",
-			__func__, atl_fwd_dir_str(ring), ring->idx);
+			    __func__, atl_fwd_dir_str(ring), ring->idx);
 		return -EEXIST;
 	}
 
@@ -746,15 +742,15 @@ int atl_fwd_request_event(struct atl_fwd_event *evt)
 	}
 
 	if (tx_wb && !atl_fwd_ring_tx(ring)) {
-		atl_nic_err("%s: head pointer writeback events supported "
-			"on Tx rings only\n", __func__);
+		atl_nic_err("%s: head pointer writeback events supported on Tx rings only\n",
+			    __func__);
 		return -EINVAL;
 	}
 
 	if ((evt->flags & (ATL_FWD_EVT_TXWB | ATL_FWD_EVT_AUTOMASK)) ==
 		(ATL_FWD_EVT_TXWB | ATL_FWD_EVT_AUTOMASK)) {
-		atl_nic_err("%s: event automasking supported "
-			"for MSI events only\n", __func__);
+		atl_nic_err("%s: event automasking supported for MSI events only\n",
+			    __func__);
 		return -EINVAL;
 	}
 
@@ -1025,7 +1021,7 @@ static int atl_get_crash_dump_act_res(struct atl_hw *hw, struct atl_crash_dump_a
 
 	err = atl_hwsem_get(hw, ATL2_MCP_SEM_ACT_RSLVR);
 	if (err) {
-		printk("Failed to aquire act_res semaphore\n");
+		pr_err("Failed to aquire act_res semaphore\n");
 		goto ret;
 	}
 
@@ -1072,7 +1068,6 @@ ret:
 	return size;
 }
 
-
 int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dump)
 {
 	struct atl_nic *nic = netdev_priv(ndev);
@@ -1086,14 +1081,10 @@ int atl_get_crash_dump(struct net_device *ndev, struct atl_crash_dump *crash_dum
 	crash_dump->length = sizeof(*crash_dump);
 	crash_dump->sections_count = 0;
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 7, 8)
 	strscpy(crash_dump->drv_version, ATL_VERSION, sizeof(crash_dump->drv_version));
-#else
-	strlcpy(crash_dump->drv_version, ATL_VERSION, sizeof(crash_dump->drv_version));
-#endif
 
 	snprintf(crash_dump->fw_version, sizeof(crash_dump->fw_version),
-		"%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff, fw_rev & 0xffff);
+		 "%d.%d.%d", fw_rev >> 24, fw_rev >> 16 & 0xff, fw_rev & 0xffff);
 
 	if (nic->hw.chip_id == ATL_ANTIGUA)
 		section = (void *)&crash_dump->antigua.regs;
