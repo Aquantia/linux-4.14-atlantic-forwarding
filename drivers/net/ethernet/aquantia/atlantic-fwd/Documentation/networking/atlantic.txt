@@ -127,7 +127,7 @@ command line or via modprobe.conf files. Some parameters marked as
 
 - macsec_bridge = < 1 | 0 > (default: 1) [RO]
   When set to 0, several SecY can be created, macsec will filter by source mac
-  address to apply apropriate SecY.
+  address to apply appropriate SecY.
   By default, only 1 SecY can be created, macsec will handle all packets.
 
 - rx/tx_ring_size = <8..8184> (default: 4096) [RO]
