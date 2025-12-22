@@ -19,19 +19,17 @@
 #include "atl_desc.h"
 
 DECLARE_EVENT_CLASS(atl_dma_map_class,
-	TP_PROTO(int frag_idx, int ring_idx, dma_addr_t daddr, size_t size, struct sk_buff *skb,
-		void *vaddr),
+		    TP_PROTO(int frag_idx, int ring_idx, dma_addr_t daddr, size_t size,
+			     struct sk_buff *skb, void *vaddr),
 	TP_ARGS(frag_idx, ring_idx, daddr, size, skb, vaddr),
-	TP_STRUCT__entry(
-		__field(int, frag_idx)
+	TP_STRUCT__entry(__field(int, frag_idx)
 		__field(int, ring_idx)
 		__field(dma_addr_t, daddr)
 		__field(size_t, size)
 		__field(struct sk_buff *, skb)
 		__field(void *, vaddr)
 	),
-	TP_fast_assign(
-		__entry->frag_idx = frag_idx;
+	TP_fast_assign(__entry->frag_idx = frag_idx;
 		__entry->ring_idx = ring_idx;
 		__entry->daddr = daddr;
 		__entry->size = size;
@@ -39,8 +37,8 @@ DECLARE_EVENT_CLASS(atl_dma_map_class,
 		__entry->vaddr = vaddr;
 	),
 	TP_printk("idx %d ring idx %d daddr %pad len %#zx skb %p vaddr %p",
-		__entry->frag_idx, __entry->ring_idx, &__entry->daddr,
-		__entry->size, __entry->skb, __entry->vaddr)
+		  __entry->frag_idx, __entry->ring_idx, &__entry->daddr,
+		  __entry->size, __entry->skb, __entry->vaddr)
 );
 
 #define DEFINE_MAP_EVENT(name)						\
@@ -55,26 +53,24 @@ DEFINE_MAP_EVENT(atl_dma_map_frag);
 DEFINE_MAP_EVENT(atl_dma_map_rxbuf);
 
 DECLARE_EVENT_CLASS(atl_dma_unmap_class,
-	TP_PROTO(int frag_idx, int ring_idx, dma_addr_t daddr, size_t size,
-		struct sk_buff *skb),
+		    TP_PROTO(int frag_idx, int ring_idx, dma_addr_t daddr, size_t size,
+			     struct sk_buff *skb),
 	TP_ARGS(frag_idx, ring_idx, daddr, size, skb),
-	TP_STRUCT__entry(
-		__field(int, frag_idx)
+	TP_STRUCT__entry(__field(int, frag_idx)
 		__field(int, ring_idx)
 		__field(dma_addr_t, daddr)
 		__field(size_t, size)
 		__field(struct sk_buff *, skb)
 	),
-	TP_fast_assign(
-		__entry->frag_idx = frag_idx;
+	TP_fast_assign(__entry->frag_idx = frag_idx;
 		__entry->ring_idx = ring_idx;
 		__entry->daddr = daddr;
 		__entry->size = size;
 		__entry->skb = skb;
 	),
 	TP_printk("idx %d ring idx %d daddr %pad len %#zx skb %p",
-		__entry->frag_idx, __entry->ring_idx, &__entry->daddr,
-		__entry->size, __entry->skb)
+		  __entry->frag_idx, __entry->ring_idx, &__entry->daddr,
+		  __entry->size, __entry->skb)
 );
 
 #define DEFINE_UNMAP_EVENT(name)					\
@@ -88,15 +84,13 @@ DEFINE_UNMAP_EVENT(atl_dma_unmap_frag);
 DEFINE_UNMAP_EVENT(atl_dma_unmap_rxbuf);
 
 TRACE_EVENT(atl_fill_rx_desc,
-	TP_PROTO(int ring_idx, struct atl_rx_desc *desc),
+	    TP_PROTO(int ring_idx, struct atl_rx_desc *desc),
 	TP_ARGS(ring_idx, desc),
-	TP_STRUCT__entry(
-		__field(int, ring_idx)
+	TP_STRUCT__entry(__field(int, ring_idx)
 		__field(dma_addr_t, daddr)
 		__field(dma_addr_t, haddr)
 	),
-	TP_fast_assign(
-		__entry->ring_idx = ring_idx;
+	TP_fast_assign(__entry->ring_idx = ring_idx;
 		__entry->daddr = desc->daddr;
 		__entry->haddr = desc->haddr;
 	),
@@ -104,34 +98,36 @@ TRACE_EVENT(atl_fill_rx_desc,
 );
 
 TRACE_EVENT(atl_sync_rx_range,
-	TP_PROTO(int ring_idx, dma_addr_t daddr, unsigned long pg_off,
-		size_t size),
+	    TP_PROTO(int ring_idx, dma_addr_t daddr, unsigned long pg_off,
+		     size_t size),
 	TP_ARGS(ring_idx, daddr, pg_off, size),
-	TP_STRUCT__entry(
-		__field(int, ring_idx)
+	TP_STRUCT__entry(__field(int, ring_idx)
 		__field(dma_addr_t, daddr)
 		__field(unsigned long, pg_off)
 		__field(size_t, size)
 	),
-	TP_fast_assign(
-		__entry->ring_idx = ring_idx;
+	TP_fast_assign(__entry->ring_idx = ring_idx;
 		__entry->daddr = daddr;
 		__entry->pg_off = pg_off;
 		__entry->size = size;
 	),
 	TP_printk("[%d] daddr %pad pg_off %#lx size %#zx", __entry->ring_idx,
-		&__entry->daddr, __entry->pg_off, __entry->size)
+		  &__entry->daddr, __entry->pg_off, __entry->size)
 );
 
 #define DESCR_FIELD(DESCR, BIT_BEGIN, BIT_END) \
-	((DESCR >> BIT_END) &\
-		(BIT_ULL(BIT_BEGIN - BIT_END + 1) - 1))
+({ \
+	typeof(DESCR) _descr = (DESCR); \
+	typeof(BIT_BEGIN) _bit_begin = (BIT_BEGIN); \
+	typeof(BIT_END) _bit_end = (BIT_END); \
+	((_descr >> _bit_end) & \
+		(BIT_ULL(_bit_begin - _bit_end + 1) - 1)); \
+})
 
 TRACE_EVENT(atl_rx_descr,
-	TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
+	    TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
 	TP_ARGS(ring_idx, pointer, descr),
-	TP_STRUCT__entry(
-		__field(unsigned int, ring_idx)
+	TP_STRUCT__entry(__field(unsigned int, ring_idx)
 		__field(unsigned int, pointer)
 		__field(u8, dd)
 		__field(u8, eop)
@@ -151,8 +147,7 @@ TRACE_EVENT(atl_rx_descr,
 		__field(u32, rss_hash)
 
 	),
-	TP_fast_assign(
-		__entry->ring_idx = ring_idx;
+	TP_fast_assign(__entry->ring_idx = ring_idx;
 		__entry->pointer = pointer;
 		__entry->rss_hash = DESCR_FIELD(descr[0], 63, 32);
 		__entry->hdr_len =  DESCR_FIELD(descr[0], 31, 22);
@@ -161,7 +156,6 @@ TRACE_EVENT(atl_rx_descr,
 		__entry->rsvd = DESCR_FIELD(descr[0], 18, 12);
 		__entry->pkt_type = DESCR_FIELD(descr[0], 11, 4);
 		__entry->rss_type = DESCR_FIELD(descr[0], 3, 0);
-
 		__entry->vlan_tag = DESCR_FIELD(descr[1], 63, 48);
 		__entry->next_desp = DESCR_FIELD(descr[1], 47, 32);
 		__entry->pkt_len = DESCR_FIELD(descr[1], 31, 16);
@@ -181,10 +175,9 @@ TRACE_EVENT(atl_rx_descr,
 );
 
 TRACE_EVENT(atl_tx_descr,
-	TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
+	    TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
 	TP_ARGS(ring_idx, pointer, descr),
-	TP_STRUCT__entry(
-		__field(unsigned int, ring_idx)
+	TP_STRUCT__entry(__field(unsigned int, ring_idx)
 		__field(unsigned int, pointer)
 		/* Tx Descriptor */
 		__field(u64, data_buf_addr)
@@ -199,8 +192,7 @@ TRACE_EVENT(atl_tx_descr,
 		__field(u8, rsvd1)
 		__field(u8, des_typ)
 	),
-	TP_fast_assign(
-		__entry->ring_idx = ring_idx;
+	TP_fast_assign(__entry->ring_idx = ring_idx;
 		__entry->pointer = pointer;
 		__entry->data_buf_addr = descr[0];
 		__entry->pay_len = DESCR_FIELD(descr[1], 63, 46);
@@ -222,12 +214,10 @@ TRACE_EVENT(atl_tx_descr,
 		  __entry->rsvd1, __entry->des_typ)
 );
 
-
 TRACE_EVENT(atl_tx_context_descr,
-	TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
+	    TP_PROTO(int ring_idx, unsigned int pointer, u64 *descr),
 	TP_ARGS(ring_idx, pointer, descr),
-	TP_STRUCT__entry(
-		__field(unsigned int, ring_idx)
+	TP_STRUCT__entry(__field(unsigned int, ring_idx)
 		__field(unsigned int, pointer)
 		/* Tx Context Descriptor */
 		__field(u8, out_len)
@@ -242,8 +232,7 @@ TRACE_EVENT(atl_tx_context_descr,
 		__field(u8, ct_idx)
 		__field(u8, des_typ)
 	),
-	TP_fast_assign(
-		__entry->ring_idx = ring_idx;
+	TP_fast_assign(__entry->ring_idx = ring_idx;
 		__entry->pointer = pointer;
 		__entry->out_len = DESCR_FIELD(descr[0], 63, 56);
 		__entry->tun_len = DESCR_FIELD(descr[0], 55, 48);
