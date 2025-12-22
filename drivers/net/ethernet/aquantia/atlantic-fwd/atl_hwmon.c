@@ -13,10 +13,11 @@
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,10,0)
+#if IS_REACHABLE(CONFIG_HWMON)
 
 static ssize_t atl_hwmon_set_flag(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t size)
+				  struct device_attribute *attr,
+				  const char *buf, size_t size)
 {
 	struct sensor_device_attribute *sattr = to_sensor_dev_attr(attr);
 	struct atl_hw *hw = dev_get_drvdata(dev);
@@ -32,7 +33,8 @@ static ssize_t atl_hwmon_set_flag(struct device *dev,
 }
 
 static ssize_t atl_hwmon_show_flag(struct device *dev,
-	struct device_attribute *attr, char *buf)
+				   struct device_attribute *attr,
+				   char *buf)
 {
 	struct sensor_device_attribute *sattr = to_sensor_dev_attr(attr);
 	struct atl_hw *hw = dev_get_drvdata(dev);
@@ -42,7 +44,7 @@ static ssize_t atl_hwmon_show_flag(struct device *dev,
 }
 
 #define ATL_HWMON_BIT_ATTR(_name, _bit) \
-	SENSOR_DEVICE_ATTR(_name, S_IRUGO | S_IWUSR, atl_hwmon_show_flag, \
+	SENSOR_DEVICE_ATTR(_name, 0644, atl_hwmon_show_flag, \
 		atl_hwmon_set_flag, _bit)
 
 static ATL_HWMON_BIT_ATTR(monitor, atl_thermal_monitor_shift);
@@ -61,7 +63,7 @@ static char *atl_hwmon_labels[] = {
 	"PHY Temperature",
 };
 
-static const uint32_t atl_hwmon_temp_config[] = {
+static const u32 atl_hwmon_temp_config[] = {
 	HWMON_T_INPUT | HWMON_T_LABEL | HWMON_T_CRIT | HWMON_T_MAX |
 	HWMON_T_MAX_HYST | HWMON_T_MAX_ALARM,
 	0,
@@ -78,24 +80,25 @@ static const struct hwmon_channel_info *atl_hwmon_info[] = {
 };
 
 static umode_t atl_hwmon_is_visible(const void *p,
-	enum hwmon_sensor_types type, uint32_t attr, int channel)
+				    enum hwmon_sensor_types type,
+				    u32 attr, int channel)
 {
 	if (type != hwmon_temp)
 		return 0;
 
 	switch (attr) {
 	case hwmon_temp_input: case hwmon_temp_max_alarm: case hwmon_temp_label:
-		return S_IRUGO;
+		return 0444;
 
 	case hwmon_temp_crit: case hwmon_temp_max: case hwmon_temp_max_hyst:
-		return S_IRUGO | S_IWUSR;
+		return 0644;
 	}
 
 	return 0;
 }
 
 static int atl_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
-	uint32_t attr, int channel, long *val)
+			  u32 attr, int channel, long *val)
 {
 	struct atl_hw *hw = dev_get_drvdata(dev);
 	int temp, ret;
@@ -135,10 +138,10 @@ static int atl_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
 }
 
 static int atl_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
-	uint32_t attr, int channel, long val)
+			   u32 attr, int channel, long val)
 {
 	struct atl_hw *hw = dev_get_drvdata(dev);
-	uint8_t *ptr, old;
+	u8 *ptr, old;
 	int ret;
 
 	if (type != hwmon_temp)
@@ -172,7 +175,8 @@ static int atl_hwmon_write(struct device *dev, enum hwmon_sensor_types type,
 }
 
 static int atl_hwmon_read_string(struct device *dev,
-	enum hwmon_sensor_types type, u32 attr, int channel, const char **str)
+				 enum hwmon_sensor_types type, u32 attr,
+				 int channel, const char **str)
 {
 	if (type != hwmon_temp || attr != hwmon_temp_label)
 		return -EINVAL;
@@ -199,7 +203,9 @@ int atl_hwmon_init(struct atl_nic *nic)
 	struct atl_hw *hw = &nic->hw;
 
 	hwmon_dev = devm_hwmon_device_register_with_info(&hw->pdev->dev,
-		nic->ndev->name, hw, &atl_hwmon, atl_hwmon_groups);
+							 nic->ndev->name, hw,
+							 &atl_hwmon,
+							 atl_hwmon_groups);
 
 	return PTR_ERR_OR_ZERO(hwmon_dev);
 }
@@ -208,7 +214,7 @@ int atl_hwmon_init(struct atl_nic *nic)
 
 int atl_hwmon_init(struct atl_nic *nic)
 {
-	return 0;
+		return 0;
 }
 
 #endif
