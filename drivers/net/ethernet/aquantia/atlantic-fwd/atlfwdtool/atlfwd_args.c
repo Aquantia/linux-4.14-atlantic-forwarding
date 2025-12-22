@@ -170,46 +170,46 @@ struct atlfwd_args *parse_args(const int argc, char **argv)
 
 	switch (parsed_args.cmd) {
 	case ATL_FWD_CMD_REQUEST_RING:
-		parsed_args.flags = (uint32_t)atoi(get_arg(argc, argv));
-		parsed_args.ring_size = (uint32_t)atoi(get_arg(argc, argv));
-		parsed_args.buf_size = (uint32_t)atoi(get_arg(argc, argv));
+		parsed_args.flags = (u32)atoi(get_arg(argc, argv));
+		parsed_args.ring_size = (u32)atoi(get_arg(argc, argv));
+		parsed_args.buf_size = (u32)atoi(get_arg(argc, argv));
 		parsed_args.page_order =
-			(uint32_t)atoi(get_last_arg(argc, argv));
+			(u32)atoi(get_last_arg(argc, argv));
 		break;
 	case ATL_FWD_CMD_RING_STATUS:
 		if (optind == argc) {
 			parsed_args.ring_index = -1;
 			break;
 		}
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_RELEASE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_ENABLE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DISABLE_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DUMP_RING:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_REQUEST_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_RELEASE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_ENABLE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_DISABLE_EVENT:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_GET_RX_QUEUE:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_GET_TX_QUEUE:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_FORCE_ICMP_TX_VIA:
-		/* fall through */
+		fallthrough;
 	case ATL_FWD_CMD_FORCE_TX_VIA:
 		parsed_args.ring_index =
 			(int32_t)atoi(get_last_arg(argc, argv));
 		break;
 	case ATL_FWD_CMD_SET_TX_BUNCH:
-		parsed_args.tx_bunch = (uint32_t)atoi(get_last_arg(argc, argv));
+		parsed_args.tx_bunch = (u32)atoi(get_last_arg(argc, argv));
 		break;
 	case ATL_FWD_CMD_DISABLE_REDIRECTIONS:
 		break;
