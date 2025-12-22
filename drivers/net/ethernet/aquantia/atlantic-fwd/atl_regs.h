@@ -65,8 +65,8 @@
 enum mcp_scratchpad {
 	FW2_MBOX_DATA = 11,	/* 0x328 */
 	FW2_MBOX_CMD = 12,	/* 0x32c */
-	FW2_RPC_DATA = 14, 	/* 0x334 */
-	FW_STAT_STRUCT = 25, 	/* 0x360 */
+	FW2_RPC_DATA = 14,	/* 0x334 */
+	FW_STAT_STRUCT = 25,	/* 0x360 */
 	FW2_EFUSE_SHADOW = 26,	/* 0x364 */
 	FW1_LINK_REQ = 27,
 	FW2_LINK_REQ_LOW = 27,	/* 0x368 */
@@ -157,7 +157,7 @@ enum mcp_scratchpad {
 #define ATL_RX_INTR_CTRL 0x5a30
 #define ATL_RX_INTR_MOD_CTRL(idx) ATL_REG_STRIDE(0x5a40, 4, idx)
 #define ATL2_RPF_RSS_REDIR(TC, INDEX) (0x6200 + \
-				       (0x100 * (TC > 3 ? 1 : 0)) + (INDEX) * 4)
+				       (0x100 * ((TC) > 3 ? 1 : 0)) + (INDEX) * 4)
 #define ATL2_RPF_L3_FLT(filter) ATL_REG_STRIDE(0x6500, 0x4, filter)
 #define ATL2_RPF_L3_SA(filter) ATL_REG_STRIDE(0x6400, 0x10, filter)
 #define ATL2_RPF_L3_DA(filter) ATL_REG_STRIDE(0x6480, 0x10, filter)
@@ -233,7 +233,6 @@ enum mcp_scratchpad {
 #define ATL_MSM_CTR_RX_MULTICAST 0xE8
 #define ATL_MSM_CTR_RX_BROADCAST 0xF0
 #define ATL_MSM_CTR_RX_ERRS 0x120
-
 
 #define ATL_MSM2_CTR_RX_DROP_CNTR_LO 0x158
 #define ATL_MSM2_CTR_RX_DROP_CNTR_HI 0x15C
