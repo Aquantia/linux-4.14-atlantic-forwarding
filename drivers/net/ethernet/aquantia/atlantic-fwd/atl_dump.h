@@ -25,17 +25,17 @@ struct atl_crash_dump_regs {
 	u32 type;
 	u32 length;
 	union {
-		u32 regs_data[0x9000/4];
+		u32 regs_data[0x9000 / 4];
 		struct{
-			u32 mif[0x1000/4];
-			u32 pci[0x1000/4];
-			u32 itr[0x1000/4];
-			u32 com[0x1000/4];
-			u32 mac_phy[0x1000/4];
+			u32 mif[0x1000 / 4];
+			u32 pci[0x1000 / 4];
+			u32 itr[0x1000 / 4];
+			u32 com[0x1000 / 4];
+			u32 mac_phy[0x1000 / 4];
 			union {
-				u32 rx[0x2000/4];
+				u32 rx[0x2000 / 4];
 				struct{
-					u32 res1[0x700/4];
+					u32 res1[0x700 / 4];
 					u32 pb_ctrl;
 					u32 res2;
 					u32 pb_status;
@@ -60,7 +60,7 @@ struct atl_crash_dump_regs {
 					} dma_desc[32];
 				} layout;
 			};
-			u32 tx[0x2000/4];
+			u32 tx[0x2000 / 4];
 		} layout;
 	};
 };
@@ -69,9 +69,9 @@ struct atl_crash_dump_fwiface {
 	u32 type;
 	u32 length;
 	/* struct fw_interface_in */
-	u32 fw_interface_in[0x1000/4];
+	u32 fw_interface_in[0x1000 / 4];
 	/* struct fw_interface_out */
-	u32 fw_interface_out[0x1000/4];
+	u32 fw_interface_out[0x1000 / 4];
 };
 
 /* Record table size of 128 with each entry holding (tag, mask, action) */
@@ -83,7 +83,7 @@ struct atl_crash_dump_act_res {
 };
 
 /* max_size = 'ring_size * (tx + rx) * 16 byte raw descriptor data' */
-#define ATL_MAX_RING_DESC_SIZE ATL_MAX_RING_SIZE * 32
+#define ATL_MAX_RING_DESC_SIZE (ATL_MAX_RING_SIZE * 32)
 struct atl_crash_dump_ring {
 	u32 type;
 	u32 length;
@@ -118,6 +118,5 @@ struct atl_crash_dump {
 		} atlantic;
 	};
 };
-
 
 #endif
