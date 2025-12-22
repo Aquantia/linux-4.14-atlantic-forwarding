@@ -29,33 +29,34 @@ struct atl_link_type atl_link_types[] = {
 	},
 
 	LINK_TYPE(atl_link_type_idx_10m_half,
-		"10BaseTX-HD", 10, DUPLEX_HALF,
-		ETHTOOL_LINK_MODE_10baseT_Half_BIT, 0, 0)
+		  "10BaseTX-HD", 10, DUPLEX_HALF,
+		  ETHTOOL_LINK_MODE_10baseT_Half_BIT, 0, 0)
 	LINK_TYPE(atl_link_type_idx_10m,
-		"10BaseTX-FD", 10, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_10baseT_Full_BIT, 0, BIT(1))
+		  "10BaseTX-FD", 10, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_10baseT_Full_BIT, 0, BIT(1))
 	LINK_TYPE(atl_link_type_idx_100m_half,
-		"100BaseTX-HD", 100, DUPLEX_HALF,
-		ETHTOOL_LINK_MODE_100baseT_Half_BIT, 0, 0)
+		  "100BaseTX-HD", 100, DUPLEX_HALF,
+		  ETHTOOL_LINK_MODE_100baseT_Half_BIT, 0, 0)
 	LINK_TYPE(atl_link_type_idx_100m,
-		"100BaseTX-FD", 100, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_100baseT_Full_BIT, 0x20, BIT(5))
+		  "100BaseTX-FD", 100, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_100baseT_Full_BIT, 0x20, BIT(5))
 	LINK_TYPE(atl_link_type_idx_1g_half,
-		"1000BaseT-HD", 1000, DUPLEX_HALF,
-		ETHTOOL_LINK_MODE_1000baseT_Half_BIT, 0, 0)
+		  "1000BaseT-HD", 1000, DUPLEX_HALF,
+		  ETHTOOL_LINK_MODE_1000baseT_Half_BIT, 0, 0)
 	LINK_TYPE(atl_link_type_idx_1g,
-		"1000BaseT-FD", 1000, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_1000baseT_Full_BIT, 0x10, BIT(8))
+		  "1000BaseT-FD", 1000, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_1000baseT_Full_BIT, 0x10, BIT(8))
 	LINK_TYPE(atl_link_type_idx_2p5g,
-		"2.5GBaseT-FD", 2500, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_2500baseT_Full_BIT, 8, BIT(9))
+		  "2.5GBaseT-FD", 2500, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_2500baseT_Full_BIT, 8, BIT(9))
 	LINK_TYPE(atl_link_type_idx_5g,
-		"5GBaseT-FD", 5000, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_5000baseT_Full_BIT, 2, BIT(10))
+		  "5GBaseT-FD", 5000, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_5000baseT_Full_BIT, 2, BIT(10))
 	LINK_TYPE(atl_link_type_idx_10g,
-		"10GBaseT-FD", 10000, DUPLEX_FULL,
-		ETHTOOL_LINK_MODE_10000baseT_Full_BIT, 1, BIT(11))
+		  "10GBaseT-FD", 10000, DUPLEX_FULL,
+		  ETHTOOL_LINK_MODE_10000baseT_Full_BIT, 1, BIT(11))
 };
+
 #define ATL_FW2_LINK_MSK (BIT(5) | BIT(8) | BIT(9) | BIT(10) | BIT(11))
 
 const int atl_num_rates = ARRAY_SIZE(atl_link_types);
@@ -63,30 +64,30 @@ const int atl_num_rates = ARRAY_SIZE(atl_link_types);
 /* fw lock must be held */
 static int __atl_fw1_wait_fw_init(struct atl_hw *hw)
 {
-	uint32_t hostData_addr;
-	uint32_t id, new_id;
+	u32 host_data_addr;
+	u32 id, new_id;
 	int ret;
 
 	mdelay(10);
 
-	busy_wait(2000, mdelay(1), hostData_addr,
+	busy_wait(2000, mdelay(1), host_data_addr,
 		  atl_read(hw, ATL_MCP_SCRATCH(FW_STAT_STRUCT)),
-		  hostData_addr == 0);
+		  host_data_addr == 0);
 
-	atl_dev_dbg("got hostData address: 0x%x\n", hostData_addr);
+	atl_dev_dbg("got hostData address: 0x%x\n", host_data_addr);
 
-	ret = atl_read_mcp_mem(hw, hostData_addr + 4, &id, 4);
+	ret = atl_read_mcp_mem(hw, host_data_addr + 4, &id, 4);
 	if (ret)
 		return  ret;
 
 	busy_wait(10000, mdelay(1), ret,
-		  atl_read_mcp_mem(hw, hostData_addr + 4, &new_id, 4),
+		  atl_read_mcp_mem(hw, host_data_addr + 4, &new_id, 4),
 		  !ret && new_id == id);
 	if (ret)
 		return ret;
 	if (new_id == id) {
 		atl_dev_err("timeout waiting for FW to start (initial transactionId 0x%x, hostData addr 0x%x)\n",
-			    id, hostData_addr);
+			    id, host_data_addr);
 		return -EIO;
 	}
 
@@ -97,27 +98,27 @@ static int __atl_fw1_wait_fw_init(struct atl_hw *hw)
 /* fw lock must be held */
 static int __atl_fw2_wait_fw_init(struct atl_hw *hw)
 {
-	uint32_t reg;
+	u32 reg;
 	int ret = 0;
 
 	busy_wait(1000, mdelay(1), reg, atl_read(hw, ATL_GLOBAL_FW_IMAGE_ID),
-		!reg);
+		  !reg);
 	if (!reg)
 		return -EIO;
 
 	hw->mcp.req_high = atl_read(hw,
-				 ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH));
+				    ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH));
 
 	hw->mcp.fw_stat_addr = atl_read(hw, ATL_MCP_SCRATCH(FW_STAT_STRUCT));
 	hw->mcp.rpc_addr = atl_read(hw, ATL_MCP_SCRATCH(FW2_RPC_DATA));
 
 	ret = atl_read_fwstat_word(hw, atl_fw2_stat_settings_addr,
-		&hw->mcp.fw_settings_addr);
+				   &hw->mcp.fw_settings_addr);
 	if (ret)
 		return ret;
 
 	ret = atl_read_fwstat_word(hw, atl_fw2_stat_settings_len,
-		&hw->mcp.fw_settings_len);
+				   &hw->mcp.fw_settings_len);
 	if (ret)
 		return ret;
 
@@ -125,7 +126,7 @@ static int __atl_fw2_wait_fw_init(struct atl_hw *hw)
 }
 
 static struct atl_link_type *atl_parse_fw_bits(struct atl_hw *hw,
-	uint32_t low, uint32_t high, int fw_idx)
+					       u32 low, u32 high, int fw_idx)
 {
 	struct atl_link_state *lstate = &hw->link_state;
 	unsigned int lp_adv = 0, adv = lstate->advertized;
@@ -134,8 +135,10 @@ static struct atl_link_type *atl_parse_fw_bits(struct atl_hw *hw,
 	int last = -1;
 	int i;
 
-	atl_for_each_rate(i, link) {
-		uint32_t link_bit = link->fw_bits[fw_idx];
+	for (i = 0, link = atl_link_types;
+	     i < atl_num_rates;
+	     i++, link++) {
+		u32 link_bit = link->fw_bits[fw_idx];
 
 		if (!(low & link_bit))
 			continue;
@@ -154,7 +157,7 @@ static struct atl_link_type *atl_parse_fw_bits(struct atl_hw *hw,
 	if (last >= 0) {
 		link = &atl_link_types[last];
 		if ((lp_adv & BIT(last + ATL_EEE_BIT_OFFT)) &&
-			(adv & BIT(last + ATL_EEE_BIT_OFFT)))
+		    (adv & BIT(last + ATL_EEE_BIT_OFFT)))
 			eee = true;
 	}
 
@@ -165,7 +168,7 @@ static struct atl_link_type *atl_parse_fw_bits(struct atl_hw *hw,
 
 static struct atl_link_type *atl_fw1_check_link(struct atl_hw *hw)
 {
-	uint32_t reg;
+	u32 reg;
 	struct atl_link_type *link;
 
 	atl_lock_fw(hw);
@@ -187,8 +190,8 @@ static struct atl_link_type *atl_fw2_check_link(struct atl_hw *hw)
 	struct atl_link_type *link;
 	struct atl_link_state *lstate = &hw->link_state;
 	enum atl_fc_mode fc = atl_fc_none;
-	uint32_t low;
-	uint32_t high;
+	u32 low;
+	u32 high;
 	bool alarm;
 
 	low = atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_LOW));
@@ -225,16 +228,16 @@ static int __atl_fw2_get_link_caps(struct atl_hw *hw)
 {
 	struct atl_nic *nic = container_of(hw, struct atl_nic, hw);
 	struct atl_mcp *mcp = &hw->mcp;
-	uint32_t fw_stat_addr = mcp->fw_stat_addr;
+	u32 fw_stat_addr = mcp->fw_stat_addr;
 	struct atl_link_type *rate;
 	unsigned int supported = 0;
-	uint32_t caps[2], caps_ex;
-	uint32_t mask = atl_fw2_pause_mask | atl_fw2_link_drop;
+	u32 caps[2], caps_ex;
+	u32 mask = atl_fw2_pause_mask | atl_fw2_link_drop;
 	int i, ret;
 
 	atl_dev_dbg("Host data struct addr: %#x\n", fw_stat_addr);
 	ret = atl_read_mcp_mem(hw, fw_stat_addr + atl_fw2_stat_lcaps,
-		caps, 8);
+			       caps, 8);
 	if (ret)
 		return ret;
 	ret = atl_read_fwstat_word(hw, atl_fw2_stat_caps_ex, &caps_ex);
@@ -247,8 +250,10 @@ static int __atl_fw2_get_link_caps(struct atl_hw *hw)
 	mcp->wdog_disabled = !(mcp->caps_ex & atl_fw2_ex_caps_mac_heartbeat);
 	atl_dev_dbg("Got link caps: %#x %#x %#x\n", caps[0], caps[1], caps_ex);
 
-	atl_for_each_rate(i, rate) {
-		uint32_t bit = rate->fw_bits[1];
+	for (i = 0, rate = atl_link_types;
+	     i < atl_num_rates;
+	     i++, rate++) {
+		u32 bit = rate->fw_bits[1];
 
 		if (bit & caps[0]) {
 			supported |= BIT(i);
@@ -285,8 +290,8 @@ static inline unsigned int atl_link_adv(struct atl_link_state *lstate)
 {
 	struct atl_hw *hw = container_of(lstate, struct atl_hw, link_state);
 
-	if (lstate->thermal_throttled
-		&& hw->thermal.flags & atl_thermal_throttle)
+	if (lstate->thermal_throttled &&
+	    hw->thermal.flags & atl_thermal_throttle)
 		/* FW doesn't provide raw LP's advertized rates, only
 		 * the rates adverized both by us and LP. Here we
 		 * advertize not just the throttled_to rate, but also
@@ -327,20 +332,22 @@ static inline bool atl_fw2_set_link_needed(struct atl_link_state *lstate)
 	return atl_fw1_set_link_needed(lstate) || ret;
 }
 
-static uint64_t atl_set_fw_bits(struct atl_hw *hw, int fw_idx)
+static u64 atl_set_fw_bits(struct atl_hw *hw, int fw_idx)
 {
 	unsigned int adv = atl_link_adv(&hw->link_state);
 	struct atl_link_type *ltype;
-	uint64_t link = 0;
+	u64 link = 0;
 	int i;
 
-	atl_for_each_rate(i, ltype) {
-		uint32_t bit = ltype->fw_bits[fw_idx];
+	for (i = 0, ltype = atl_link_types;
+	     i < atl_num_rates;
+	     i++, ltype++) {
+		u32 bit = ltype->fw_bits[fw_idx];
 
 		if (adv & BIT(i)) {
 			link |= bit;
 			if (adv & BIT(i + ATL_EEE_BIT_OFFT))
-				link |= (uint64_t)bit << 32;
+				link |= (u64)bit << 32;
 		}
 	}
 
@@ -349,7 +356,7 @@ static uint64_t atl_set_fw_bits(struct atl_hw *hw, int fw_idx)
 
 static void atl_fw1_set_link(struct atl_hw *hw, bool force)
 {
-	uint32_t bits;
+	u32 bits;
 
 	if (!force && !atl_fw1_set_link_needed(&hw->link_state))
 		return;
@@ -366,8 +373,8 @@ static void atl_fw1_set_link(struct atl_hw *hw, bool force)
 static void __atl_fw2_set_link(struct atl_hw *hw)
 {
 	struct atl_link_state *lstate = &hw->link_state;
-	uint32_t hi_bits;
-	uint64_t bits;
+	u32 hi_bits;
+	u64 bits;
 
 	hi_bits = hw->mcp.req_high & hw->mcp.req_high_mask;
 
@@ -407,7 +414,8 @@ static int atl_fw1_unsupported(struct atl_hw *hw)
 static int __atl_fw2_restart_aneg(struct atl_hw *hw)
 {
 	/* Autoneg restart is self-clearing, no need to track via
-	 * mcp->req_high */
+	 * mcp->req_high
+	 */
 	atl_set_bits(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), BIT(31));
 	return 0;
 }
@@ -442,13 +450,14 @@ static int atl_fw1_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 {
 	return -EOPNOTSUPP;
 }
+
 static int atl_fw2_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 {
 	int ret = 0;
-	struct offloadInfo *info;
-	struct drvIface *msg = NULL;
-	uint32_t val, wol_bits = 0, req_high = hw->mcp.req_high;
-	uint32_t low_req, wol_ex_flags = 0;
+	struct offload_info *info;
+	struct drv_iface *msg = NULL;
+	u32 val, wol_bits = 0, req_high = hw->mcp.req_high;
+	u32 low_req, wol_ex_flags = 0;
 
 	atl_lock_fw(hw);
 
@@ -474,14 +483,14 @@ static int atl_fw2_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 		if (!msg)
 			goto unlock;
 
-		info = &msg->fw2xOffloads;
+		info = &msg->fw2x_offloads;
 		info->version = 0;
 		info->len = sizeof(*info);
-		memcpy(info->macAddr, hw->mac_addr, ETH_ALEN);
+		memcpy(info->mac_addr, hw->mac_addr, ETH_ALEN);
 
 		ret = atl_write_mcp_mem(hw, 0, msg,
-			(info->len + offsetof(struct drvIface, fw2xOffloads)
-				+ 3) & ~3, MCP_AREA_CONFIG);
+					(info->len + offsetof(struct drv_iface, fw2x_offloads)
+					 + 3) & ~3, MCP_AREA_CONFIG);
 		if (ret) {
 			atl_dev_err("Failed to upload sleep proxy info to FW\n");
 			goto unlock_free;
@@ -489,7 +498,7 @@ static int atl_fw2_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 	}
 
 	if (hw->mcp.caps_ex & atl_fw2_ex_caps_wol_ex) {
-		ret = atl_write_fwsettings_word(hw, atl_fw2_setings_wol_ex, 
+		ret = atl_write_fwsettings_word(hw, atl_fw2_setings_wol_ex,
 						wol_ex_flags);
 		if (ret)
 			goto unlock_free;
@@ -500,8 +509,8 @@ static int atl_fw2_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_LOW), low_req);
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), req_high);
 	busy_wait(100, mdelay(1), val,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		(val & wol_bits) != wol_bits);
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  (val & wol_bits) != wol_bits);
 
 	ret = (val & wol_bits) == wol_bits ? 0 : -EIO;
 	if (ret)
@@ -514,7 +523,7 @@ unlock:
 	return ret;
 }
 
-int atl_read_mcp_word(struct atl_hw *hw, uint32_t offt, uint32_t *val)
+int atl_read_mcp_word(struct atl_hw *hw, u32 offt, u32 *val)
 {
 	int ret;
 
@@ -529,7 +538,7 @@ int atl_read_mcp_word(struct atl_hw *hw, uint32_t offt, uint32_t *val)
 /* fw lock must be held */
 static int __atl_fw2_get_phy_temperature(struct atl_hw *hw, int *temp)
 {
-	uint32_t req, res;
+	u32 req, res;
 	int ret = 0;
 
 	if (test_bit(ATL_ST_RESETTING, &hw->state))
@@ -539,9 +548,9 @@ static int __atl_fw2_get_phy_temperature(struct atl_hw *hw, int *temp)
 	req = hw->mcp.req_high;
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), req);
 
-	busy_wait(1000, udelay(10), res,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		((res ^ req) & atl_fw2_phy_temp) != 0);
+	busy_wait(1000, usleep_range(10, 20), res,
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  ((res ^ req) & atl_fw2_phy_temp) != 0);
 	if (((res ^ req) & atl_fw2_phy_temp) != 0) {
 		atl_dev_err("Timeout waiting for PHY temperature\n");
 		return -EIO;
@@ -618,16 +627,16 @@ static int atl_fw2_set_phy_loopback(struct atl_nic *nic, u32 mode)
 
 static int atl_fw2_update_statistics(struct atl_hw *hw)
 {
-	uint32_t req;
+	u32 req;
 	int res = 0;
 
 	hw->mcp.req_high ^= atl_fw2_statistics;
 	req = hw->mcp.req_high;
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), req);
 
-	busy_wait(10000, udelay(10), res,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		((res ^ req) & atl_fw2_statistics) != 0);
+	busy_wait(10000, usleep_range(10, 20), res,
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  ((res ^ req) & atl_fw2_statistics) != 0);
 	if (((res ^ req) & atl_fw2_statistics) != 0) {
 		atl_dev_err("Timeout waiting for statistics\n");
 		return -EIO;
@@ -657,7 +666,7 @@ unlock:
 
 static int atl_fw2_set_downshift(struct atl_hw *hw, bool on)
 {
-	uint32_t req;
+	u32 req;
 	int res = 0;
 	int ret = 0;
 
@@ -670,9 +679,9 @@ static int atl_fw2_set_downshift(struct atl_hw *hw, bool on)
 	req = hw->mcp.req_high;
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), req);
 
-	busy_wait(10000, udelay(10), res,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		((res ^ req) & atl_fw2_downshift) != 0);
+	busy_wait(10000, usleep_range(10, 20), res,
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  ((res ^ req) & atl_fw2_downshift) != 0);
 	if (((res ^ req) & atl_fw2_downshift) != 0) {
 		atl_dev_err("Timeout waiting for statistics\n");
 		ret = -EIO;
@@ -684,9 +693,8 @@ static int atl_fw2_set_downshift(struct atl_hw *hw, bool on)
 
 static int __atl_fw2x_apply_msm_settings(struct atl_hw *hw)
 {
-
-	uint32_t msg_id = atl_fw2_msm_settings_apply;
-	uint32_t high_status, high_req = 0;
+	u32 msg_id = atl_fw2_msm_settings_apply;
+	u32 high_status, high_req = 0;
 	int ret = 0;
 
 	if (!(hw->mcp.caps_ex & atl_fw2_ex_caps_msm_settings_apply))
@@ -705,8 +713,8 @@ static int __atl_fw2x_apply_msm_settings(struct atl_hw *hw)
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), high_req);
 
 	busy_wait(1000, mdelay(1), high_status,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		((high_req ^ high_status) & atl_fw2_fw_request) != 0);
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  ((high_req ^ high_status) & atl_fw2_fw_request) != 0);
 	if (((high_req ^ high_status) & atl_fw2_fw_request) != 0) {
 		atl_dev_err("Timeout waiting for fw request\n");
 		atl_unlock_fw(hw);
@@ -718,7 +726,7 @@ static int __atl_fw2x_apply_msm_settings(struct atl_hw *hw)
 
 static int atl_fw2_set_pad_stripping(struct atl_hw *hw, bool on)
 {
-	uint32_t msm_opts;
+	u32 msm_opts;
 	int ret = 0;
 
 	if (hw->mcp.fw_rev < 0x0300008e)
@@ -727,7 +735,7 @@ static int atl_fw2_set_pad_stripping(struct atl_hw *hw, bool on)
 	atl_lock_fw(hw);
 
 	ret = atl_read_fwsettings_word(hw, atl_fw2_setings_msm_opts,
-		&msm_opts);
+				       &msm_opts);
 	if (ret) {
 		if (ret == -EINVAL)
 			ret = -EOPNOTSUPP;
@@ -740,7 +748,7 @@ static int atl_fw2_set_pad_stripping(struct atl_hw *hw, bool on)
 		msm_opts |= BIT(atl_fw2_settings_msm_opts_strip_pad_shift);
 
 	ret = atl_write_fwsettings_word(hw, atl_fw2_setings_msm_opts,
-		msm_opts);
+					msm_opts);
 	if (ret)
 		goto unlock;
 
@@ -751,11 +759,11 @@ unlock:
 }
 
 static int atl_fw2_send_macsec_request(struct atl_hw *hw,
-				struct macsec_msg_fw_request *req,
-				struct macsec_msg_fw_response *response)
+				       struct macsec_msg_fw_request *req,
+				       struct macsec_msg_fw_response *response)
 {
 	int ret = 0;
-	uint32_t low_status, low_req = 0;
+	u32 low_status, low_req = 0;
 
 	if (!req || !response)
 		return -EINVAL;
@@ -780,8 +788,8 @@ static int atl_fw2_send_macsec_request(struct atl_hw *hw,
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_LOW), low_req);
 
 	busy_wait(1000, mdelay(1), low_status,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_LOW)),
-		((low_req ^ low_status) & atl_fw2_macsec) != 0);
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_LOW)),
+		  ((low_req ^ low_status) & atl_fw2_macsec) != 0);
 	if (((low_req ^ low_status) & atl_fw2_macsec) != 0) {
 		atl_dev_err("Timeout waiting for macsec request\n");
 		atl_unlock_fw(hw);
@@ -797,51 +805,51 @@ static int atl_fw2_send_macsec_request(struct atl_hw *hw,
 }
 
 /* fw lock must be held */
-static int __atl_fw2_get_hbeat(struct atl_hw *hw, uint16_t *hbeat)
+static int __atl_fw2_get_hbeat(struct atl_hw *hw, u16 *hbeat)
 {
 	int ret;
-	uint32_t val;
+	u32 val;
 
 	ret = atl_read_fwstat_word(hw, atl_fw2_stat_phy_hbeat, &val);
 	if (ret)
 		atl_dev_err("FW watchdog: failure reading PHY heartbeat: %d\n",
-			-ret);
+			    -ret);
 	else
 		*hbeat = val & 0xffff;
 
 	return ret;
 }
 
-static int atl_fw1_get_mac_addr(struct atl_hw *hw, uint8_t *buf)
+static int atl_fw1_get_mac_addr(struct atl_hw *hw, u8 *buf)
 {
-	uint32_t efuse_shadow_addr =
+	u32 efuse_shadow_addr =
 		atl_read(hw, ATL_MCP_SCRATCH(FW1_EFUSE_SHADOW));
-	uint8_t tmp[8];
+	u8 tmp[8];
 	int ret;
 
 	if (!efuse_shadow_addr)
 		return false;
 
 	ret = atl_read_mcp_mem(hw, efuse_shadow_addr + 40 * 4, tmp, 8);
-	*(uint32_t *)buf = htonl(*(uint32_t *)tmp);
-	*(uint16_t *)&buf[4] = (uint16_t)htonl(*(uint32_t *)&tmp[4]);
+	*(u32 *)buf = htonl(*(u32 *)tmp);
+	*(u16 *)&buf[4] = (u16)htonl(*(u32 *)&tmp[4]);
 
 	return ret;
 }
 
-static int atl_fw2_get_mac_addr(struct atl_hw *hw, uint8_t *buf)
+static int atl_fw2_get_mac_addr(struct atl_hw *hw, u8 *buf)
 {
-	uint32_t efuse_shadow_addr =
+	u32 efuse_shadow_addr =
 		atl_read(hw, ATL_MCP_SCRATCH(FW2_EFUSE_SHADOW));
-	uint8_t tmp[8];
+	u8 tmp[8];
 	int ret;
 
 	if (!efuse_shadow_addr)
 		return false;
 
 	ret = atl_read_mcp_mem(hw, efuse_shadow_addr + 40 * 4, tmp, 8);
-	*(uint32_t *)buf = htonl(*(uint32_t *)tmp);
-	*(uint16_t *)&buf[4] = (uint16_t)htonl(*(uint32_t *)&tmp[4]);
+	*(u32 *)buf = htonl(*(u32 *)tmp);
+	*(u16 *)&buf[4] = (u16)htonl(*(u32 *)&tmp[4]);
 
 	return ret;
 }
@@ -851,10 +859,10 @@ static int __atl_fw2_set_thermal_monitor(struct atl_hw *hw, bool enable)
 {
 	struct atl_mcp *mcp = &hw->mcp;
 	int ret;
-	uint32_t high;
+	u32 high;
 
 	if (enable) {
-		struct atl_fw2_thermal_cfg cfg __attribute__((__aligned__(4)));
+		struct atl_fw2_thermal_cfg cfg __aligned(4);
 
 		cfg.msg_id = 0x17;
 		cfg.shutdown_temp = hw->thermal.crit;
@@ -862,21 +870,22 @@ static int __atl_fw2_set_thermal_monitor(struct atl_hw *hw, bool enable)
 		cfg.normal_temp = hw->thermal.low;
 
 		ret = atl_write_mcp_mem(hw, 0, &cfg, (sizeof(cfg) + 3) & ~3,
-			MCP_AREA_CONFIG);
+					MCP_AREA_CONFIG);
 		if (ret) {
 			atl_dev_err("Failed to upload thermal thresholds to firmware: %d\n",
-				ret);
+				    ret);
 			return ret;
 		}
 
 		mcp->req_high |= atl_fw2_set_thermal;
-	} else
+	} else {
 		mcp->req_high &= ~atl_fw2_set_thermal;
+	}
 
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), mcp->req_high);
-	busy_wait(1000, udelay(10), high,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		!!(high & atl_fw2_set_thermal) != enable);
+	busy_wait(1000, usleep_range(10, 20), high,
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  !!(high & atl_fw2_set_thermal) != enable);
 	if (!!(high & atl_fw2_set_thermal) != enable) {
 		atl_dev_err("Timeout waiting for thermal monitoring FW request\n");
 		return -EIO;
@@ -905,7 +914,8 @@ static int atl_fw2_update_thermal(struct atl_hw *hw)
 	if (!enable || (mcp->req_high & atl_fw2_set_thermal)) {
 		/* If monitoring is on and we need to change the
 		 * thresholds, we need to temporarily disable thermal
-		 * monitoring first. */
+		 * monitoring first.
+		 */
 		ret = __atl_fw2_set_thermal_monitor(hw, false);
 		if (ret) {
 			atl_unlock_fw(hw);
@@ -964,8 +974,8 @@ static int atl_fw2_send_ptp_request(struct atl_hw *hw,
 	atl_write(hw, ATL_MCP_SCRATCH(FW2_LINK_REQ_HIGH), high_req);
 
 	busy_wait(1000, mdelay(1), high_status,
-		atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
-		((high_req ^ high_status) & atl_fw2_fw_request) != 0);
+		  atl_read(hw, ATL_MCP_SCRATCH(FW2_LINK_RES_HIGH)),
+		  ((high_req ^ high_status) & atl_fw2_fw_request) != 0);
 	if (((high_req ^ high_status) & atl_fw2_fw_request) != 0) {
 		atl_dev_err("Timeout waiting for fw request\n");
 		ret = -EIO;
@@ -1046,9 +1056,10 @@ static struct atl_fw_ops atl_fw_ops[2] = {
 struct atl_thermal_limit {
 	uintptr_t offset;
 	const char *name;
-	unsigned min;
-	unsigned max;
+	unsigned int min;
+	unsigned int max;
 };
+
 #define atl_def_thermal_limit(_name, _field, _min, _max)	\
 {								\
 	.offset = offsetof(struct atl_thermal, _field),		\
@@ -1070,18 +1081,18 @@ int atl_verify_thermal_limits(struct atl_hw *hw, struct atl_thermal *thermal)
 
 	for (i = 0; i < ARRAY_SIZE(atl_thermal_limits); i++) {
 		struct atl_thermal_limit *lim = &atl_thermal_limits[i];
-		unsigned val = *((uint8_t *)thermal + lim->offset);
+		unsigned int val = *((u8 *)thermal + lim->offset);
 
 		if (val >= lim->min && val <= lim->max)
 			continue;
 
 		if (ignore) {
-			atl_dev_init_warn("%s temperature threshold out of range (%d - %d): %d, allowing anyway\n",
-				lim->name, lim->min, lim->max, val);
+			atl_dev_init_warn("%s temp threshold out of range (%d-%d): %d, allowing\n",
+					  lim->name, lim->min, lim->max, val);
 			continue;
 		} else {
 			atl_dev_init_err("%s temperature threshold out of range (%d - %d): %d\n",
-				lim->name, lim->min, lim->max, val);
+					 lim->name, lim->min, lim->max, val);
 			return -EINVAL;
 		}
 	}
@@ -1098,8 +1109,7 @@ int atl_update_thermal(struct atl_hw *hw)
 		return ret;
 
 	if (test_bit(ATL_ST_RESETTING, &hw->state))
-		/* After reset, atl_fw_init() will apply the settings
-		 * skipped here */
+		/* After reset, atl_fw_init() will apply the settings skipped here */
 		return 0;
 
 	ret = hw->mcp.ops->update_thermal(hw);
@@ -1110,7 +1120,7 @@ int atl_update_thermal(struct atl_hw *hw)
 int atl_update_thermal_flag(struct atl_hw *hw, int bit, bool val)
 {
 	struct atl_thermal *thermal = &hw->thermal;
-	unsigned flags, changed;
+	unsigned int flags, changed;
 	int ret = 0;
 
 	flags = thermal->flags;
@@ -1151,19 +1161,18 @@ int atl_update_thermal_flag(struct atl_hw *hw, int bit, bool val)
 	thermal->flags = flags;
 
 	if (test_bit(ATL_ST_RESETTING, &hw->state))
-		/* After reset, atl_fw_init() will apply the settings
-		 * skipped here */
+		/* After reset, atl_fw_init() will apply the settings skipped here */
 		return ret;
 
 	if (changed & atl_thermal_monitor) {
 		ret = hw->mcp.ops->update_thermal(hw);
 	} else if (changed & atl_thermal_throttle &&
-		   hw->link_state.thermal_throttled)
+		   hw->link_state.thermal_throttled) {
 		hw->mcp.ops->set_link(hw, true);
+	}
 
 	if (ret)
-		/* __atl_fw2_update_thermal() failed. Revert flag
-		 * changes */
+		/* __atl_fw2_update_thermal() failed. Revert flag changes */
 		thermal->flags ^= changed;
 
 	return ret;
@@ -1180,20 +1189,20 @@ static int atl_fw_rev_check_and_warn(int fw_rev)
 	switch (major) {
 	case 2:
 		if ((((fw_rev >> 16) & 0xFFU) < 12) &&
-			    ((fw_rev & 0xFFFFU) < 12))
+		    ((fw_rev & 0xFFFFU) < 12))
 			ret = false;
 		break;
 
 	case 3:
 		if ((((fw_rev >> 16) & 0xFFU) < 1) &&
-			    ((fw_rev & 0xFFFFU) < 102))
+		    ((fw_rev & 0xFFFFU) < 102))
 			ret = false;
 
 		break;
 
 	case 4:
 		if ((((fw_rev >> 16) & 0xFFU) < 2) &&
-			    ((fw_rev & 0xFFFFU) < 37))
+		    ((fw_rev & 0xFFFFU) < 37))
 			ret = false;
 
 		break;
@@ -1207,7 +1216,7 @@ static int atl_fw_rev_check_and_warn(int fw_rev)
 
 int atl_fw_init(struct atl_hw *hw)
 {
-	uint32_t tries, reg, major;
+	u32 tries, reg, major;
 	int ret;
 	struct atl_mcp *mcp = &hw->mcp;
 
@@ -1223,8 +1232,8 @@ int atl_fw_init(struct atl_hw *hw)
 	/* Warn if FW is lower than 2.12.12, 3.1.102 and 4.2.37 */
 	if (!atl_fw_rev_check_and_warn(reg))
 		atl_dev_warn("FW_version: %u.%u.%u, is not stable version",
-			    (reg >> 24), ((reg >> 16) & 0xFFU),
-			    (reg & 0xFFFFU));
+			     (reg >> 24), ((reg >> 16) & 0xFFU),
+			     (reg & 0xFFFFU));
 
 	if (!major || major > 3) {
 		atl_dev_err("Unsupported FW major version: %u\n", major);
@@ -1253,7 +1262,7 @@ void atl_fw_watchdog(struct atl_hw *hw)
 {
 	struct atl_mcp *mcp = &hw->mcp;
 	int ret;
-	uint16_t hbeat;
+	u16 hbeat;
 
 	if (mcp->wdog_disabled || !time_after(jiffies, mcp->next_wdog))
 		return;
@@ -1267,12 +1276,12 @@ void atl_fw_watchdog(struct atl_hw *hw)
 	ret = mcp->ops->__get_hbeat(hw, &hbeat);
 	if (ret) {
 		atl_dev_err("FW watchdog: failure reading PHY heartbeat: %d\n",
-			-ret);
+			    -ret);
 		goto out;
 	}
 
 	if (hbeat == mcp->phy_hbeat) {
-		atl_dev_err("FW watchdog: FW hang (PHY heartbeat stuck at %hd), resetting\n", hbeat);
+		atl_dev_err("FW watchdog: FW hang (PHY heartbeat stuck at %d), resetting\n", hbeat);
 		set_bit(ATL_ST_RESET_NEEDED, &hw->state);
 	}
 
