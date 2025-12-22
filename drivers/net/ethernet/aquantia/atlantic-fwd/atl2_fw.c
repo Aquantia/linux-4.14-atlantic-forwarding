@@ -18,7 +18,12 @@
 
 #define ATL2_FW_READ_TRY_MAX 1000
 
-#define atl2_shared_buffer_write(HW, ITEM, VARIABLE) \
+/* CHECKPATCH FALSE POSITIVE: ITEM reuse is safe here.
+ * ITEM is used as a struct member identifier, not as an expression.
+ * It's used in compile-time operations (offsetof, sizeof, stringification)
+ * and cannot have side-effects.
+ */
+#define atl2_shared_buffer_write(HW, ITEM, VARIABLE) do { \
 	BUILD_BUG_ON_MSG((offsetof(struct fw_interface_in, ITEM) % \
 			 sizeof(u32)) != 0,\
 			 "Unaligned write " # ITEM);\
@@ -26,9 +31,15 @@
 			 "Unaligned write length " # ITEM);\
 	atl2_mif_shared_buf_write(HW,\
 		(offsetof(struct fw_interface_in, ITEM) / sizeof(u32)),\
-		(u32 *)&VARIABLE, sizeof(VARIABLE) / sizeof(u32))
+		(u32 *)&(VARIABLE), sizeof(VARIABLE) / sizeof(u32));\
+} while (0)
 
-#define atl2_shared_buffer_get(HW, ITEM, VARIABLE) \
+/* CHECKPATCH FALSE POSITIVE: ITEM reuse is safe here.
+ * ITEM is used as a struct member identifier, not as an expression.
+ * It's used in compile-time operations (offsetof, sizeof, stringification)
+ * and cannot have side-effects.
+ */
+#define atl2_shared_buffer_get(HW, ITEM, VARIABLE) do { \
 	BUILD_BUG_ON_MSG((offsetof(struct fw_interface_in, ITEM) % \
 			 sizeof(u32)) != 0,\
 			 "Unaligned get " # ITEM);\
@@ -36,14 +47,19 @@
 			 "Unaligned get length " # ITEM);\
 	atl2_mif_shared_buf_get(HW, \
 		(offsetof(struct fw_interface_in, ITEM) / sizeof(u32)),\
-		(u32 *)&VARIABLE, \
-		sizeof(VARIABLE) / sizeof(u32))
+		(u32 *)&(VARIABLE), \
+		sizeof(VARIABLE) / sizeof(u32));\
+} while (0)
 
 /* This should never be used on non atomic fields,
  * treat any > u32 read as non atomic.
+ *
+ * CHECKPATCH FALSE POSITIVE: ITEM reuse is safe here.
+ * ITEM is used as a struct member identifier, not as an expression.
+ * It's used in compile-time operations (offsetof, sizeof, stringification)
+ * and cannot have side-effects.
  */
-#define atl2_shared_buffer_read(HW, ITEM, VARIABLE) \
-{\
+#define atl2_shared_buffer_read(HW, ITEM, VARIABLE) do { \
 	BUILD_BUG_ON_MSG((offsetof(struct fw_interface_out, ITEM) % \
 			 sizeof(u32)) != 0,\
 			 "Unaligned read " # ITEM);\
@@ -53,12 +69,11 @@
 			 "Non atomic read " # ITEM);\
 	atl2_mif_shared_buf_read(HW, \
 		(offsetof(struct fw_interface_out, ITEM) / sizeof(u32)),\
-		(u32 *)&VARIABLE, \
-		sizeof(VARIABLE) / sizeof(u32));\
-}
+		(u32 *)&(VARIABLE), sizeof(VARIABLE) / sizeof(u32));\
+} while (0)
 
 static void atl2_mif_shared_buf_get(struct atl_hw *hw, int offset,
-				       u32 *data, int len)
+				    u32 *data, int len)
 {
 	int i;
 
@@ -76,13 +91,13 @@ static void atl2_mif_shared_boot_buf_write(struct atl_hw *hw, int offset,
 }
 
 static void atl2_mif_shared_buf_write(struct atl_hw *hw, int offset,
-				  u32 *data, int len)
+				      u32 *data, int len)
 {
 	int i;
 
 	for (i = 0; i < len; i++)
 		atl_write(hw, ATL2_MIF_SHARED_BUFFER_IN(offset + i),
-				data[i]);
+			  data[i]);
 }
 
 static void atl2_mif_shared_buf_read(struct atl_hw *hw, int offset,
@@ -104,11 +119,24 @@ static u32 atl2_mif_mcp_finished_read_get(struct atl_hw *hw)
 	return atl_read(hw, ATL2_MIF_MCP_FINISHED_READ) & 1;
 }
 
+/* CHECKPATCH FALSE POSITIVE: ITEM reuse is safe here.
+ * ITEM is used as a struct member identifier, not as an expression.
+ * It's used in compile-time operations (offsetof, sizeof, stringification)
+ * and cannot have side-effects.
+ */
 #define atl2_shared_buffer_read_safe(HW, ITEM, DATA) \
+({\
+	BUILD_BUG_ON_MSG((offsetof(struct fw_interface_out, ITEM) % \
+			 sizeof(u32)) != 0,\
+			 "Unaligned read_safe " # ITEM);\
+	BUILD_BUG_ON_MSG((sizeof(((struct fw_interface_out *)0)->ITEM) % \
+			 sizeof(u32)) != 0,\
+			 "Unaligned read_safe length " # ITEM);\
 	_atl2_shared_buffer_read_safe((HW), \
 		(offsetof(struct fw_interface_out, ITEM) / sizeof(u32)),\
 		sizeof(((struct fw_interface_out *)0)->ITEM) / sizeof(u32),\
-		(DATA))
+		(DATA));\
+})
 
 /* There are two 16bit transaction counters. The one is incremented at start of
  * changing non atomic value, the other one - at the end. So we need to wait for
@@ -116,8 +144,8 @@ static u32 atl2_mif_mcp_finished_read_get(struct atl_hw *hw)
  * at the end of read.
  */
 static int _atl2_shared_buffer_read_safe(struct atl_hw *hw,
-		     uint32_t offset, uint32_t dwords,
-		     void *data)
+					 u32 offset, u32 dwords,
+					 void *data)
 {
 	struct transaction_counter_s tid1, tid2;
 	int cnt = 0;
@@ -204,7 +232,7 @@ static int atl2_fw_get_filter_caps(struct atl_hw *hw)
 	nic->rxf_ntuple.l3_v6_available = filter_caps.l3_ip6_filter_count;
 	nic->rxf_ntuple.l4_base_index = filter_caps.l4_filter_base_index;
 	nic->rxf_ntuple.l4_available = min_t(u32, filter_caps.l4_filter_count,
-						ATL_NTUPLE_FLT_NUM - 1);
+					     ATL_NTUPLE_FLT_NUM - 1);
 
 	return 0;
 }
@@ -213,7 +241,7 @@ static int __atl2_fw_wait_init(struct atl_hw *hw)
 {
 	struct request_policy_s request_policy;
 	struct link_control_s link_control;
-	uint32_t mtu;
+	u32 mtu;
 	int err;
 
 	BUILD_BUG_ON_MSG(sizeof(struct link_options_s) != 0x4,
@@ -228,7 +256,6 @@ static int __atl2_fw_wait_init(struct atl_hw *hw)
 			 "cableDiagControl invalid size");
 	BUILD_BUG_ON_MSG(sizeof(struct statistics_s) != 0x74,
 			 "statistics_s invalid size");
-
 
 	BUILD_BUG_ON_MSG(offsetof(struct fw_interface_in, mtu) != 0,
 			 "mtu invalid offset");
@@ -272,7 +299,7 @@ static int __atl2_fw_wait_init(struct atl_hw *hw)
 				  device_link_caps) != 0x648,
 			 "deviceLinkCaps invalid offset");
 	BUILD_BUG_ON_MSG(offsetof(struct fw_interface_out,
-				 sleep_proxy_caps) != 0x650,
+				  sleep_proxy_caps) != 0x650,
 			 "sleepProxyCaps invalid offset");
 	BUILD_BUG_ON_MSG(offsetof(struct fw_interface_out,
 				  lkp_link_caps) != 0x660,
@@ -346,8 +373,8 @@ static inline unsigned int atl_link_adv(struct atl_link_state *lstate)
 {
 	struct atl_hw *hw = container_of(lstate, struct atl_hw, link_state);
 
-	if (lstate->thermal_throttled
-		&& hw->thermal.flags & atl_thermal_throttle)
+	if (lstate->thermal_throttled &&
+	    hw->thermal.flags & atl_thermal_throttle)
 		/* FW doesn't provide raw LP's advertized rates, only
 		 * the rates adverized both by us and LP. Here we
 		 * advertize not just the throttled_to rate, but also
@@ -378,7 +405,7 @@ static bool atl2_fw_set_link_needed(struct atl_link_state *lstate)
 }
 
 static void atl2_set_rate(struct atl_hw *hw,
-				   struct link_options_s *link_options)
+			  struct link_options_s *link_options)
 {
 	unsigned int adv = atl_link_adv(&hw->link_state);
 
@@ -398,7 +425,7 @@ static void atl2_set_rate(struct atl_hw *hw,
 static void atl2_set_eee(struct atl_link_state *lstate,
 			 struct link_options_s *link_options, bool eee_enabled)
 {
-	uint32_t eee_advertized = lstate->advertized >> ATL_EEE_BIT_OFFT;
+	u32 eee_advertized = lstate->advertized >> ATL_EEE_BIT_OFFT;
 
 	if (!eee_enabled) {
 		link_options->eee_100M = 0;
@@ -425,7 +452,8 @@ static void __atl2_fw_set_link(struct atl_hw *hw)
 
 	atl2_shared_buffer_get(hw, link_options, link_options);
 
-	link_options.pause_rx = link_options.pause_tx = 0;
+	link_options.pause_rx = 0;
+	link_options.pause_tx = 0;
 	if (lstate->fc.req & atl_fc_rx) {
 		link_options.pause_rx = 1;
 		link_options.pause_tx = 1;
@@ -616,7 +644,6 @@ static int __atl2_fw_get_link_caps(struct atl_hw *hw)
 	unsigned int supported = 0;
 	int ret = 0;
 
-
 	atl2_shared_buffer_read(hw, device_link_caps, device_link_caps);
 
 	mcp->wdog_disabled = true;
@@ -676,7 +703,7 @@ static int atl2_fw_get_phy_temperature(struct atl_hw *hw, int *temp)
 	return ret;
 }
 
-static int atl2_fw_get_mac_addr(struct atl_hw *hw, uint8_t *mac)
+static int atl2_fw_get_mac_addr(struct atl_hw *hw, u8 *mac)
 {
 	struct mac_address_aligned_s mac_address;
 	int err = 0;
@@ -689,7 +716,7 @@ static int atl2_fw_get_mac_addr(struct atl_hw *hw, uint8_t *mac)
 }
 
 /* fw lock must be held */
-static int __atl2_fw_get_hbeat(struct atl_hw *hw, uint16_t *hbeat)
+static int __atl2_fw_get_hbeat(struct atl_hw *hw, u16 *hbeat)
 {
 	struct phy_health_monitor_s phy_health_monitor;
 	int ret = 0;
@@ -760,9 +787,8 @@ static int atl2_fw_enable_wol(struct atl_hw *hw, unsigned int wol_mode)
 			wake_on_lan.restore_link_before_wake = 1;
 	}
 
-	if (wol_mode & atl_fw_wake_on_link_rtpm) {
+	if (wol_mode & atl_fw_wake_on_link_rtpm)
 		wake_on_lan.wake_on_link_up = 1;
-	}
 
 	if (wol_mode & atl_fw_wake_on_magic) {
 		wake_on_lan.wake_on_magic_packet = 1;
@@ -802,7 +828,7 @@ static int atl2_fw_update_thermal(struct atl_hw *hw)
 	atl2_shared_buffer_get(hw, thermal_shutdown, thermal_shutdown);
 	thermal_shutdown.shutdown_enable = enable;
 	thermal_shutdown.shutdown_temp_threshold = hw->thermal.crit;
-	thermal_shutdown.warning_hot_tempThreshold = hw->thermal.high;
+	thermal_shutdown.warning_hot_temp_threshold = hw->thermal.high;
 	thermal_shutdown.warning_cold_temp_threshold = hw->thermal.low;
 	atl2_shared_buffer_write(hw, thermal_shutdown, thermal_shutdown);
 	ret = atl2_shared_buffer_finish_ack(hw);
@@ -859,7 +885,7 @@ static int atl2_fw_dump_cfg(struct atl_hw *hw)
 }
 
 static void atl2_confirm_buffer_write(struct atl_hw *hw,
-				      uint32_t offset, uint32_t len)
+				      u32 offset, u32 len)
 {
 	struct data_buffer_status_s buffer_status;
 
@@ -870,8 +896,8 @@ static void atl2_confirm_buffer_write(struct atl_hw *hw,
 
 static int atl2_fw_restore_cfg(struct atl_hw *hw)
 {
-	uint32_t req_adr = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_ADR);
-	uint32_t req_len = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_LEN);
+	u32 req_adr = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_ADR);
+	u32 req_len = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_LEN);
 
 	if (req_adr == ATL2_ITI_ADDRESS_START) {
 		struct fw_iti_hdr iti_header;
@@ -890,7 +916,8 @@ static int atl2_fw_restore_cfg(struct atl_hw *hw)
 	} else if (req_adr == ATL2_ITI_ADDRESS_BLOCK_1) {
 		atl2_confirm_buffer_write(hw, req_adr, req_len);
 		atl2_mif_shared_boot_buf_write(hw, 0,
-			(void *)hw->mcp.fw_cfg_dump, ATL2_FW_CFG_DUMP_SIZE);
+					       (void *)hw->mcp.fw_cfg_dump,
+					       ATL2_FW_CFG_DUMP_SIZE);
 		atl2_mif_host_finished_write_set(hw, 1U);
 		return 0;
 	}
@@ -975,12 +1002,12 @@ int atl2_fw_init(struct atl_hw *hw)
 
 	/* Warn if FW is lower than 1.3.1 */
 	if (((mcp->fw_rev >> 24) < 1) ||
-	   (((mcp->fw_rev >> 16) & 0xFFU) < 3) ||
-	   ((mcp->fw_rev & 0xFFFFU) < 1))
+	    (((mcp->fw_rev >> 16) & 0xFFU) < 3) ||
+	    ((mcp->fw_rev & 0xFFFFU) < 1))
 		atl_dev_warn("FW_version: %u.%u.%u, is not stable version",
-			    (mcp->fw_rev >> 24),
-			    ((mcp->fw_rev >> 16) & 0xFFU),
-			    (mcp->fw_rev & 0xFFFFU));
+			     (mcp->fw_rev >> 24),
+			     ((mcp->fw_rev >> 16) & 0xFFU),
+			     (mcp->fw_rev & 0xFFFFU));
 
 	mcp->ops = &atl2_fw_ops;
 	atl_dev_dbg("Detect ATL2FW %x\n", mcp->fw_rev);
