@@ -50,7 +50,9 @@ int atl_compat_pci_irq_vector(struct pci_dev *dev, unsigned int nr)
 }
 
 int atl_compat_pci_alloc_irq_vectors(struct pci_dev *dev,
-	unsigned int min_vecs, unsigned int max_vecs, unsigned int flags)
+				     unsigned int min_vecs,
+				     unsigned int max_vecs,
+				     unsigned int flags)
 {
 	int vecs = -ENOSPC;
 
