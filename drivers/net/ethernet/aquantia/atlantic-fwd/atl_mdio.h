@@ -16,13 +16,13 @@
 
 int atl_mdio_hwsem_get(struct atl_hw *hw);
 void atl_mdio_hwsem_put(struct atl_hw *hw);
-int __atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t *val);
-int atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t *val);
-int __atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t val);
-int atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t val);
+int __atl_mdio_read(struct atl_hw *hw, u8 prtad, u8 mmd,
+		    u16 addr, u16 *val);
+int atl_mdio_read(struct atl_hw *hw, u8 prtad, u8 mmd,
+		  u16 addr, u16 *val);
+int __atl_mdio_write(struct atl_hw *hw, u8 prtad, u8 mmd,
+		     u16 addr, u16 val);
+int atl_mdio_write(struct atl_hw *hw, u8 prtad, u8 mmd,
+		   u16 addr, u16 val);
 
 #endif /* _ATL_MDIO_H_ */
