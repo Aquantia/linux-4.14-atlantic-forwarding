@@ -23,13 +23,13 @@ struct atlfwd_args {
 	enum atlfwd_nl_command cmd;
 	union {
 		struct {
-			uint32_t flags;
-			uint32_t ring_size;
-			uint32_t buf_size;
-			uint32_t page_order;
+			u32 flags;
+			u32 ring_size;
+			u32 buf_size;
+			u32 page_order;
 		};
-		int32_t ring_index;
-		uint32_t tx_bunch;
+		s32 ring_index;
+		u32 tx_bunch;
 	};
 };
 
