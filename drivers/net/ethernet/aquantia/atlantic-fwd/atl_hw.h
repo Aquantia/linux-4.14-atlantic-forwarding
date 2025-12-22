@@ -27,14 +27,14 @@ struct atl_nic;
 #define PCI_VENDOR_ID_AQUANTIA 0x1d6a
 
 /* clock is 3.2 ns*/
-#define ATL_HW_CLOCK_TO_US(clk)  (clk * 32 / 10000)
+#define ATL_HW_CLOCK_TO_US(clk)  ((clk) * 32 / 10000)
 
 #define ATL2_ACTION(ACTION, RSS, INDEX, VALID, TS_VALID) \
-	((((ACTION & 0x3U) << 8) | \
-	((RSS & 0x1U) << 7) | \
-	((INDEX & 0x3FU) << 2) | \
-	((TS_VALID & 0x1U) << 1)) | \
-	((VALID & 0x1U) << 0))
+	(((((ACTION) & 0x3U) << 8) | \
+	(((RSS) & 0x1U) << 7) | \
+	(((INDEX) & 0x3FU) << 2) | \
+	(((TS_VALID) & 0x1U) << 1)) | \
+	(((VALID) & 0x1U) << 0))
 
 #define ATL2_ACTION_DROP ATL2_ACTION(0, 0, 0, 1, 0)
 #define ATL2_ACTION_DISABLE ATL2_ACTION(0, 0, 0, 0, 0)
@@ -74,14 +74,14 @@ enum {
 #define ATL2_RPF_TAG_FLEX_MASK  (0x00000003 << ATL2_RPF_TAG_FLEX_OFFSET)
 #define ATL2_RPF_TAG_PCP_MASK   (0x00000007 << ATL2_RPF_TAG_PCP_OFFSET)
 
-#define ATL2_RPF_TAG_BASE_BC    (1 << ATL2_RPF_TAG_UC_OFFSET)
+#define ATL2_RPF_TAG_BASE_BC    BIT(ATL2_RPF_TAG_UC_OFFSET)
 #define ATL2_RPF_TAG_BASE_UC    (2 << ATL2_RPF_TAG_UC_OFFSET)
 
 #define ATL2_FW_HOSTLOAD_REQ_LEN_MAX 0x1000
 
 #define busy_wait(tries, wait, lvalue, fetch, cond)	\
 ({							\
-	uint32_t _dummy = 0;				\
+	u32 _dummy = 0;				\
 	int i = (tries);				\
 	int orig = i;					\
 	(void)_dummy;					\
@@ -99,10 +99,10 @@ enum atl_chip {
 };
 
 struct atl_thermal {
-	unsigned flags;
-	uint8_t crit;
-	uint8_t high;
-	uint8_t low;
+	unsigned int flags;
+	u8 crit;
+	u8 high;
+	u8 low;
 };
 
 extern struct atl_thermal atl_def_thermal;
@@ -125,22 +125,22 @@ enum atl_nic_state {
 #define ATL_WAKE_SUPPORTED (WAKE_MAGIC | WAKE_PHY)
 struct atl_hw {
 	atomic_t flags;
-	uint8_t __iomem *regs;
+	u8 __iomem *regs;
 	struct pci_dev *pdev;
 	unsigned long state;
 	enum atl_chip chip_id;
 	u32 chip_rev;
 	bool new_rpf;
 	struct atl_link_state link_state;
-	uint32_t lpi_timer;
-	unsigned wol_mode;
+	u32 lpi_timer;
+	unsigned int wol_mode;
 	struct atl_mcp mcp;
-	uint32_t non_ring_intr_mask;
-	uint8_t mac_addr[ETH_ALEN];
+	u32 non_ring_intr_mask;
+	u8 mac_addr[ETH_ALEN];
 #define ATL_RSS_KEY_SIZE 40
-	uint8_t rss_key[ATL_RSS_KEY_SIZE];
-#define ATL_RSS_TBL_SIZE (1 << 6)
-	uint8_t rss_tbl[ATL_RSS_TBL_SIZE];
+	u8 rss_key[ATL_RSS_KEY_SIZE];
+#define ATL_RSS_TBL_SIZE BIT(6)
+	u8 rss_tbl[ATL_RSS_TBL_SIZE];
 	struct atl_thermal thermal;
 #if IS_ENABLED(CONFIG_MACSEC) && defined(NETIF_F_HW_MACSEC)
 	struct atl_macsec_cfg macsec_cfg;
@@ -152,8 +152,8 @@ struct atl_hw {
 
 struct atl_hw_ring {
 	union atl_desc *descs;
-	uint32_t size;
-	uint32_t reg_base;
+	u32 size;
+	u32 reg_base;
 	dma_addr_t daddr;
 };
 
@@ -165,9 +165,9 @@ enum mcp_area {
 #define offset_ptr(ptr, ring, amount)					\
 	({								\
 		struct atl_hw_ring *hw_ring = (ring);			\
-		uint32_t size = hw_ring->size;				\
+		u32 size = hw_ring->size;				\
 									\
-		uint32_t res = (ptr) + (amount);			\
+		u32 res = (ptr) + (amount);			\
 		if ((int32_t)res < 0)					\
 			res += size;					\
 		else if (res >= size)					\
@@ -175,12 +175,12 @@ enum mcp_area {
 		res;							\
 	})
 
-void atl_check_unplug(struct atl_hw *hw, uint32_t addr);
+void atl_check_unplug(struct atl_hw *hw, u32 addr);
 
-static inline uint32_t atl_read(struct atl_hw *hw, uint32_t addr)
+static inline u32 atl_read(struct atl_hw *hw, u32 addr)
 {
-	uint8_t __iomem *base = READ_ONCE(hw->regs);
-	uint32_t val = 0xffffffff;
+	u8 __iomem *base = READ_ONCE(hw->regs);
+	u32 val = 0xffffffff;
 
 	if (unlikely(!base))
 		return val;
@@ -191,9 +191,9 @@ static inline uint32_t atl_read(struct atl_hw *hw, uint32_t addr)
 	return val;
 }
 
-static inline void atl_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
+static inline void atl_write(struct atl_hw *hw, u32 addr, u32 val)
 {
-	uint8_t __iomem *base = READ_ONCE(hw->regs);
+	u8 __iomem *base = READ_ONCE(hw->regs);
 
 	if (unlikely(!base))
 		return;
@@ -201,47 +201,46 @@ static inline void atl_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
 	writel(val, base + addr);
 }
 
-
-static inline void atl_write_mask_bits(struct atl_hw *hw, uint32_t addr,
-			     uint32_t mask, uint32_t val)
+static inline void atl_write_mask_bits(struct atl_hw *hw, u32 addr,
+				       u32 mask, u32 val)
 {
 	atl_write(hw, addr,
 		  (atl_read(hw, addr) & ~mask) | (val & mask));
 }
 
-static inline void atl_write_bits(struct atl_hw *hw, uint32_t addr,
-			     uint32_t shift, uint32_t width, uint32_t val)
+static inline void atl_write_bits(struct atl_hw *hw, u32 addr,
+				  u32 shift, u32 width, u32 val)
 {
-	uint32_t mask = ((1u << width) - 1) << shift;
+	u32 mask = ((1u << width) - 1) << shift;
 
 	atl_write(hw, addr,
 		  (atl_read(hw, addr) & ~mask) | ((val << shift) & mask));
 }
 
-static inline void atl_write_bit(struct atl_hw *hw, uint32_t addr,
-			    uint32_t shift, uint32_t val)
+static inline void atl_write_bit(struct atl_hw *hw, u32 addr,
+				 u32 shift, u32 val)
 {
 	atl_write_bits(hw, addr, shift, 1, val);
 }
 
-static inline void atl_set_bits(struct atl_hw *hw, uint32_t addr,
-	uint32_t bits)
+static inline void atl_set_bits(struct atl_hw *hw, u32 addr,
+				u32 bits)
 {
 	atl_write(hw, addr, atl_read(hw, addr) | bits);
 }
 
-static inline void atl_clear_bits(struct atl_hw *hw, uint32_t addr,
-	uint32_t bits)
+static inline void atl_clear_bits(struct atl_hw *hw, u32 addr,
+				  u32 bits)
 {
 	atl_write(hw, addr, atl_read(hw, addr) & ~bits);
 }
 
-static inline void atl_intr_enable(struct atl_hw *hw, uint32_t mask)
+static inline void atl_intr_enable(struct atl_hw *hw, u32 mask)
 {
 	atl_write(hw, ATL_INTR_MSK_SET, mask);
 }
 
-static inline void atl_intr_disable(struct atl_hw *hw, uint32_t mask)
+static inline void atl_intr_disable(struct atl_hw *hw, u32 mask)
 {
 	atl_write(hw, ATL_INTR_MSK_CLEAR, mask);
 }
@@ -251,7 +250,7 @@ static inline void atl_intr_disable_all(struct atl_hw *hw)
 	atl_intr_disable(hw, 0xffffffff);
 }
 
-static inline unsigned atl_fw_major(struct atl_hw *hw)
+static inline unsigned int atl_fw_major(struct atl_hw *hw)
 {
 	return (hw->mcp.fw_rev >> 24) & 0xff;
 }
@@ -318,52 +317,52 @@ static inline void atl2_rpf_flex_flr_tag_set(struct atl_hw *hw, u32 tag,
 	atl_write_bits(hw, ATL_RX_FLEX_FLT_CTRL(filter), 0x19, 2, tag);
 }
 
-int atl_read_mcp_mem(struct atl_hw *hw, uint32_t mcp_addr, void *host_addr,
-	unsigned size);
+int atl_read_mcp_mem(struct atl_hw *hw, u32 mcp_addr, void *host_addr,
+		     unsigned int size);
 int atl_hwinit(struct atl_hw *hw, enum atl_chip chip_id);
 void atl_refresh_link(struct atl_nic *nic);
 void atl_set_rss_key(struct atl_hw *hw);
 int atl_set_rss_tbl(struct atl_hw *hw);
-void atl_set_uc_flt(struct atl_hw *hw, int idx, uint8_t mac_addr[ETH_ALEN]);
+void atl_set_uc_flt(struct atl_hw *hw, int idx, u8 mac_addr[ETH_ALEN]);
 
 int atl_alloc_descs(struct atl_nic *nic, struct atl_hw_ring *ring, size_t extra);
 void atl_free_descs(struct atl_nic *nic, struct atl_hw_ring *ring, size_t extra);
 void atl_set_intr_bits(struct atl_hw *hw, int idx, int rxbit, int txbit);
 int atl_alloc_link_intr(struct atl_nic *nic);
 void atl_free_link_intr(struct atl_nic *nic);
-int atl_write_mcp_mem(struct atl_hw *hw, uint32_t offt, void *addr,
-	size_t size, enum mcp_area area);
-int atl_write_mcp_mem_b1(struct atl_hw *hw, uint32_t offt, void *host_addr,
-	size_t size, enum mcp_area area);
-int atl_write_mcp_mem_b0(struct atl_hw *hw, uint32_t offt, void *host_addr,
-	size_t size, enum mcp_area area);
+int atl_write_mcp_mem(struct atl_hw *hw, u32 offt, void *addr,
+		      size_t size, enum mcp_area area);
+int atl_write_mcp_mem_b1(struct atl_hw *hw, u32 offt, void *host_addr,
+			 size_t size, enum mcp_area area);
+int atl_write_mcp_mem_b0(struct atl_hw *hw, u32 offt, void *host_addr,
+			 size_t size, enum mcp_area area);
 
-static inline int atl_write_fwcfg_word(struct atl_hw *hw, uint32_t offt,
-	uint32_t val)
+static inline int atl_write_fwcfg_word(struct atl_hw *hw, u32 offt,
+				       u32 val)
 {
 	return atl_write_mcp_mem(hw, offt, &val, sizeof(val), MCP_AREA_CONFIG);
 }
 
-static inline int atl_write_fwsettings_word(struct atl_hw *hw, uint32_t offt,
-	uint32_t val)
+static inline int atl_write_fwsettings_word(struct atl_hw *hw, u32 offt,
+					    u32 val)
 {
 	return atl_write_mcp_mem(hw, offt, &val, sizeof(val), MCP_AREA_SETTINGS);
 }
 
-static inline int atl_read_fwstat_word(struct atl_hw *hw, uint32_t offt,
-	uint32_t *val)
+static inline int atl_read_fwstat_word(struct atl_hw *hw, u32 offt,
+				       u32 *val)
 {
 	return atl_read_mcp_word(hw, offt + hw->mcp.fw_stat_addr, val);
 }
 
-static inline int atl_read_rpc_mem(struct atl_hw *hw, uint32_t offt,
-				   uint32_t *val, size_t length)
+static inline int atl_read_rpc_mem(struct atl_hw *hw, u32 offt,
+				   u32 *val, size_t length)
 {
 	return atl_read_mcp_mem(hw, offt + hw->mcp.rpc_addr, val, length);
 }
 
-static inline int atl_read_fwsettings_word(struct atl_hw *hw, uint32_t offt,
-	uint32_t *val)
+static inline int atl_read_fwsettings_word(struct atl_hw *hw, u32 offt,
+					   u32 *val)
 {
 	if (offt >= hw->mcp.fw_settings_len)
 		return -EINVAL;
