@@ -26,8 +26,7 @@ int atlnl_process_ack(struct nl_context *ctx, const ssize_t len)
 #ifdef NLM_F_ACK_TLVS
 	if (ctx->nlhdr->nlmsg_flags & NLM_F_ACK_TLVS) {
 		if (!(ctx->nlhdr->nlmsg_flags & NLM_F_CAPPED))
-			tlv_offset += MNL_ALIGN(
-				mnl_nlmsg_get_payload_len(&nlerr->msg));
+			tlv_offset += MNL_ALIGN(mnl_nlmsg_get_payload_len(&nlerr->msg));
 
 		const struct nlattr *attr;
 
