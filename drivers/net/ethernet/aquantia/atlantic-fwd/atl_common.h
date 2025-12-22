@@ -21,6 +21,7 @@
 #include <linux/moduleparam.h>
 
 #define ATL_VERSION "1.1.24"
+#define ATL_DRV_NAME "atlantic-fwd"
 
 struct atl_nic;
 
@@ -56,8 +57,7 @@ enum atl_rxf_common_cmd {
 
 enum atl_ntuple_cmd {
 	ATL_NTC_EN = ATL_RXF_EN, /* Filter enabled */
-	ATL_NTC_V6 = BIT(30),	/* IPv6 mode -- only valid in filters
-				 * 0 and 4 */
+	ATL_NTC_V6 = BIT(30),	/* IPv6 mode -- only valid in filters * 0 and 4 */
 	ATL_NTC_SA = BIT(29),	/* Match source address */
 	ATL_NTC_DA = BIT(28),	/* Match destination address */
 	ATL_NTC_SP = BIT(27),	/* Match source port */
@@ -138,7 +138,7 @@ struct atl_rxf_ntuple {
 	s8 l3_idx[ATL_RXF_NTUPLE_MAX];
 	bool is_ipv6[ATL_RXF_NTUPLE_MAX];
 	s8 l4_idx[ATL_RXF_NTUPLE_MAX];
-	uint32_t cmd[ATL_RXF_NTUPLE_MAX];
+	u32 cmd[ATL_RXF_NTUPLE_MAX];
 	int count;
 	int l3_v4_base_index;
 	int l3_v4_available;
@@ -160,7 +160,7 @@ enum atl_vlan_cmd {
 #define ATL_VID_MAP_LEN BITS_TO_LONGS(BIT(12))
 
 struct atl_rxf_vlan {
-	uint32_t cmd[ATL_RXF_VLAN_MAX];
+	u32 cmd[ATL_RXF_VLAN_MAX];
 	int count;
 	unsigned long map[ATL_VID_MAP_LEN];
 	int vlans_active;
@@ -184,7 +184,7 @@ struct atl2_tag_policy {
 };
 
 struct atl_rxf_etype {
-	uint32_t cmd[ATL_RXF_ETYPE_MAX];
+	u32 cmd[ATL_RXF_ETYPE_MAX];
 	int count;
 	struct atl2_tag_policy tags_policy[ATL_RXF_ETYPE_MAX];
 	int tag[ATL_RXF_ETYPE_MAX];
@@ -207,7 +207,7 @@ enum atl_flex_cmd {
 };
 
 struct atl_rxf_flex {
-	uint32_t cmd[ATL_RXF_FLEX_MAX];
+	u32 cmd[ATL_RXF_FLEX_MAX];
 	int count;
 	int base_index;
 	int available;
@@ -216,8 +216,7 @@ struct atl_rxf_flex {
 struct atl_queue_vec;
 
 #define ATL_NUM_FWD_RINGS ATL_MAX_QUEUES
-#define ATL_FWD_RING_BASE ATL_MAX_QUEUES /* Use TC 1 for offload
-					  * engine rings */
+#define ATL_FWD_RING_BASE ATL_MAX_QUEUES /* Use TC 1 for offload * engine rings */
 #define ATL_NUM_MSI_VECS 32
 enum {
 	ATL_IRQ_LINK = 0,
@@ -260,8 +259,8 @@ struct atl_nic {
 	struct atl_queue_vec *qvecs;
 	int nvecs;
 	struct atl_hw hw;
-	unsigned flags;
-	uint32_t priv_flags;
+	unsigned int flags;
+	u32 priv_flags;
 	struct timer_list work_timer;
 	int max_mtu;
 	unsigned int requested_nvecs;
@@ -270,7 +269,7 @@ struct atl_nic {
 	int rx_intr_delay;
 	int tx_intr_delay;
 	struct atl_global_stats stats;
-	spinlock_t stats_lock;
+	spinlock_t stats_lock; /* protects stats structure */
 	struct work_struct work;
 
 #if IS_ENABLED(CONFIG_ATLFWD_FWD)
@@ -296,10 +295,6 @@ enum atl_nic_flags {
 	ATL_FL_WOL = BIT(1),
 };
 
-#define ATL_PF(_name) ATL_PF_ ## _name
-#define ATL_PF_BIT(_name) ATL_PF_ ## _name ## _BIT
-#define ATL_DEF_PF_BIT(_name) ATL_PF_BIT(_name) = BIT(ATL_PF(_name))
-
 enum atl_priv_flags {
 	ATL_PF_LPB_SYS_PB,
 	ATL_PF_LPB_SYS_DMA,
@@ -317,32 +312,32 @@ enum atl_priv_flags {
 };
 
 enum atl_priv_flag_bits {
-	ATL_DEF_PF_BIT(LPB_SYS_PB),
-	ATL_DEF_PF_BIT(LPB_SYS_DMA),
-	ATL_DEF_PF_BIT(LPB_NET_DMA),
-	ATL_DEF_PF_BIT(LPB_INT_PHY),
-	ATL_DEF_PF_BIT(LPB_EXT_PHY),
+	ATL_PF_LPB_SYS_PB_BIT = BIT(ATL_PF_LPB_SYS_PB),
+	ATL_PF_LPB_SYS_DMA_BIT = BIT(ATL_PF_LPB_SYS_DMA),
+	ATL_PF_LPB_NET_DMA_BIT = BIT(ATL_PF_LPB_NET_DMA),
+	ATL_PF_LPB_INT_PHY_BIT = BIT(ATL_PF_LPB_INT_PHY),
+	ATL_PF_LPB_EXT_PHY_BIT = BIT(ATL_PF_LPB_EXT_PHY),
 
-	ATL_PF_LPB_MASK = ATL_PF_BIT(LPB_SYS_DMA) | ATL_PF_BIT(LPB_SYS_PB) |
-			  ATL_PF_BIT(LPB_NET_DMA) | ATL_PF_BIT(LPB_INT_PHY) |
-			  ATL_PF_BIT(LPB_EXT_PHY),
+	ATL_PF_LPB_MASK = ATL_PF_LPB_SYS_DMA_BIT | ATL_PF_LPB_SYS_PB_BIT |
+			  ATL_PF_LPB_NET_DMA_BIT | ATL_PF_LPB_INT_PHY_BIT |
+			  ATL_PF_LPB_EXT_PHY_BIT,
 
-	ATL_DEF_PF_BIT(LPI_RX_MAC),
-	ATL_DEF_PF_BIT(LPI_TX_MAC),
-	ATL_DEF_PF_BIT(LPI_RX_PHY),
-	ATL_DEF_PF_BIT(LPI_TX_PHY),
-	ATL_PF_LPI_MASK = ATL_PF_BIT(LPI_RX_MAC) | ATL_PF_BIT(LPI_TX_MAC) |
-		ATL_PF_BIT(LPI_RX_PHY) | ATL_PF_BIT(LPI_TX_PHY),
+	ATL_PF_LPI_RX_MAC_BIT = BIT(ATL_PF_LPI_RX_MAC),
+	ATL_PF_LPI_TX_MAC_BIT = BIT(ATL_PF_LPI_TX_MAC),
+	ATL_PF_LPI_RX_PHY_BIT = BIT(ATL_PF_LPI_RX_PHY),
+	ATL_PF_LPI_TX_PHY_BIT = BIT(ATL_PF_LPI_TX_PHY),
+	ATL_PF_LPI_MASK = ATL_PF_LPI_RX_MAC_BIT | ATL_PF_LPI_TX_MAC_BIT |
+		ATL_PF_LPI_RX_PHY_BIT | ATL_PF_LPI_TX_PHY_BIT,
 
-	ATL_DEF_PF_BIT(STATS_RESET),
+	ATL_PF_STATS_RESET_BIT = BIT(ATL_PF_STATS_RESET),
 
-	ATL_DEF_PF_BIT(STRIP_PAD),
-	ATL_DEF_PF_BIT(MEDIA_DETECT),
-	ATL_DEF_PF_BIT(DOWNSHIFT),
+	ATL_PF_STRIP_PAD_BIT = BIT(ATL_PF_STRIP_PAD),
+	ATL_PF_MEDIA_DETECT_BIT = BIT(ATL_PF_MEDIA_DETECT),
+	ATL_PF_DOWNSHIFT_BIT = BIT(ATL_PF_DOWNSHIFT),
 
-	ATL_PF_RW_MASK = ATL_PF_LPB_MASK | ATL_PF_BIT(STATS_RESET) |
-		ATL_PF_BIT(STRIP_PAD) | ATL_PF_BIT(MEDIA_DETECT) |
-		ATL_PF_BIT(DOWNSHIFT),
+	ATL_PF_RW_MASK = ATL_PF_LPB_MASK | ATL_PF_STATS_RESET_BIT |
+		ATL_PF_STRIP_PAD_BIT | ATL_PF_MEDIA_DETECT_BIT |
+		ATL_PF_DOWNSHIFT_BIT,
 	ATL_PF_RO_MASK = ATL_PF_LPI_MASK,
 };
 
@@ -351,14 +346,12 @@ enum atl_priv_flag_bits {
 #define ATL_MAX_RING_SIZE (8192 - 8)
 #define ATL_RING_SIZE 4096
 
-extern const char atl_driver_name[];
-
 extern const struct ethtool_ops atl_ethtool_ops;
 
 extern unsigned int atl_max_queues;
 extern unsigned int atl_max_queues_non_msi;
-extern unsigned atl_rx_linear;
-extern unsigned atl_min_intr_delay;
+extern unsigned int atl_rx_linear;
+extern unsigned int atl_min_intr_delay;
 extern bool atl_enable_msi;
 extern bool atl_wq_non_msi;
 extern unsigned int atl_tx_clean_budget;
@@ -388,7 +381,7 @@ int atl_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vid);
 void atl_set_rx_mode(struct net_device *ndev);
 int atl_set_features(struct net_device *ndev, netdev_features_t features);
 void atl_get_stats64(struct net_device *ndev,
-	struct rtnl_link_stats64 *stats);
+		     struct rtnl_link_stats64 *stats);
 int atl_setup_datapath(struct atl_nic *nic);
 void atl_clear_datapath(struct atl_nic *nic);
 int atl_start_rings(struct atl_nic *nic);
@@ -416,14 +409,14 @@ int atl_vlan_promisc_status(struct net_device *ndev);
 void atl_set_vlan_promisc(struct atl_hw *hw, int promisc);
 int atl_hwsem_get(struct atl_hw *hw, int idx);
 void atl_hwsem_put(struct atl_hw *hw, int idx);
-int __atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val);
-int atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val);
-int __atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val);
-int atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val);
+int __atl_msm_read(struct atl_hw *hw, u32 addr, u32 *val);
+int atl_msm_read(struct atl_hw *hw, u32 addr, u32 *val);
+int __atl_msm_write(struct atl_hw *hw, u32 addr, u32 val);
+int atl_msm_write(struct atl_hw *hw, u32 addr, u32 val);
 int atl_update_eth_stats(struct atl_nic *nic);
 void atl_adjust_eth_stats(struct atl_ether_stats *stats,
-	struct atl_ether_stats *base, bool add);
-int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay);
+			  struct atl_ether_stats *base, bool add);
+int atl_get_lpi_timer(struct atl_nic *nic, u32 *lpi_delay);
 void atl_refresh_rxfs(struct atl_nic *nic);
 void atl_schedule_work(struct atl_nic *nic);
 int atl_hwmon_init(struct atl_nic *nic);
