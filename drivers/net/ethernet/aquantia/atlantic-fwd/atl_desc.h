@@ -16,7 +16,7 @@
 
 #if defined(__LITTLE_ENDIAN_BITFIELD)
 struct __packed atl_tx_ctx {
-	unsigned long long :40; //0
+	unsigned long long:40;  //0
 	unsigned tun_len:8;     //40
 	unsigned out_len:16;    //48
 	unsigned type:3;        //64
@@ -32,12 +32,12 @@ struct __packed atl_tx_ctx {
 struct __packed atl_tx_desc {
 	unsigned long long daddr:64; //0
 	unsigned type:3;        //64
-	unsigned :1;            //67
+	unsigned:1;             //67
 	unsigned len:16;        //68
 	unsigned dd:1;          //84
 	unsigned eop:1;         //85
 	unsigned cmd:8;         //86
-	unsigned :14;           //94
+	unsigned:14;            //94
 	unsigned ct_idx:1;      //108
 	unsigned ct_en:1;       //109
 	unsigned pay_len:18;    //110
@@ -66,13 +66,13 @@ enum atl_tx_ctx_cmd {
 };
 
 struct __packed atl_rx_desc {
-	uint64_t daddr;      			//0
+	u64 daddr;				//0
 	union {
 		struct {
 			unsigned dd:1;		//64
-			uint64_t haddr63:63;	//65
+			u64 haddr63:63;	//65
 		};
-		uint64_t haddr;
+		u64 haddr;
 	};
 };
 
@@ -80,7 +80,7 @@ struct __packed atl_rx_desc_wb {
 	unsigned rss_type:4;    //0
 	unsigned pkt_type:8;    //4
 	unsigned rdm_err:1;     //12
-	unsigned :6;            //13
+	unsigned:6;             //13
 	unsigned rx_cntl:2;     //19
 	unsigned sph:1;         //21
 	unsigned hdr_len:10;    //22
@@ -131,7 +131,7 @@ enum atl_rx_pkt_type {
 	atl_rx_pkt_type_l3_arp = 3,
 	atl_rx_pkt_type_l3_msk = 3,
 	atl_rx_pkt_type_tcp = 0 << 2,
-	atl_rx_pkt_type_udp = 1 << 2 ,
+	atl_rx_pkt_type_udp = 1 << 2,
 	atl_rx_pkt_type_sctp = 2 << 2,
 	atl_rx_pkt_type_icmp = 3 << 2,
 	atl_rx_pkt_type_l4_msk = ((1 << 3) - 1) << 2,
@@ -152,8 +152,7 @@ union __packed atl_desc {
 	};
 	struct atl_tx_ctx ctx;
 	struct atl_tx_desc tx;
-	uint8_t raw[16];
+	u8 raw[16];
 };
-
 
 #endif
