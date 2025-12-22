@@ -27,9 +27,9 @@ static void atl_unplugged(struct atl_hw *hw)
 	dev_err(&hw->pdev->dev, "Device removed\n");
 }
 
-void atl_check_unplug(struct atl_hw *hw, uint32_t addr)
+void atl_check_unplug(struct atl_hw *hw, u32 addr)
 {
-	uint32_t val;
+	u32 val;
 
 	if (addr == ATL_GLOBAL_MIF_ID) {
 		atl_unplugged(hw);
@@ -41,10 +41,10 @@ void atl_check_unplug(struct atl_hw *hw, uint32_t addr)
 		atl_unplugged(hw);
 }
 
-int atl_read_mcp_mem(struct atl_hw *hw, uint32_t mcp_addr, void *host_addr,
-		      unsigned int size)
+int atl_read_mcp_mem(struct atl_hw *hw, u32 mcp_addr, void *host_addr,
+		     unsigned int size)
 {
-	uint32_t *addr = (uint32_t *)host_addr;
+	u32 *addr = (u32 *)host_addr;
 	int ret;
 
 	ret = atl_hwsem_get(hw, ATL_MCP_SEM_MEM);
@@ -54,12 +54,12 @@ int atl_read_mcp_mem(struct atl_hw *hw, uint32_t mcp_addr, void *host_addr,
 	size = (size + 3) & ~3u;
 	atl_write(hw, ATL_GLOBAL_MBOX_ADDR, mcp_addr);
 	while (size) {
-		uint32_t next;
+		u32 next;
 
 		atl_write(hw, ATL_GLOBAL_MBOX_CTRL, 0x8000);
 
 		if (hw->chip_rev == 0xb1) {
-			busy_wait(100, udelay(10), next,
+			busy_wait(100, usleep_range(10, 20), next,
 				  atl_read(hw, ATL_GLOBAL_MBOX_ADDR),
 				  next == mcp_addr);
 			if (next == mcp_addr) {
@@ -68,10 +68,11 @@ int atl_read_mcp_mem(struct atl_hw *hw, uint32_t mcp_addr, void *host_addr,
 				ret = -EIO;
 				goto err_exit;
 			}
-		} else
-			busy_wait(100, udelay(10), next,
+		} else {
+			busy_wait(100, usleep_range(10, 20), next,
 				  atl_read(hw, ATL_GLOBAL_MBOX_CTRL),
 				  next & BIT(8));
+		}
 
 		*addr = atl_read(hw, ATL_GLOBAL_MBOX_DATA);
 		mcp_addr += 4;
@@ -112,9 +113,9 @@ static void atl2_hw_init_new_rx_filters(struct atl_hw *hw);
 static void atl_set_promisc(struct atl_hw *hw, bool enabled, bool allmulti)
 {
 	atl_write_bit(hw, ATL_RX_FLT_CTRL1, 3, enabled);
-	if (hw->new_rpf)
+	if (hw->new_rpf) {
 		atl2_hw_new_rx_filter_promisc(hw, enabled, allmulti);
-	else {
+	} else {
 		atl_write_bit(hw, ATL_RX_MC_FLT_MSK, 14, allmulti);
 		atl_write(hw, ATL_RX_MC_FLT(0), allmulti ? 0x80010FFF : 0x00010FFF);
 	}
@@ -146,13 +147,13 @@ static inline void atl_enable_dma_net_lpb_mode(struct atl_nic *nic)
 	atl_write_bit(hw, ATL_TX_PBUF_CTRL1, 4, 0);
 	atl_write_bit(hw, ATL_TX_CTRL1, 4, 1);
 	atl_write_bit(hw, ATL_RX_CTRL1, 4, 1);
-
 }
+
 /* entered with fw lock held */
 static int atl_hw_reset_nonrbl(struct atl_hw *hw)
 {
-	uint32_t tries;
-	uint32_t reg = atl_read(hw, ATL_GLOBAL_DAISY_CHAIN_STS1);
+	u32 tries;
+	u32 reg = atl_read(hw, ATL_GLOBAL_DAISY_CHAIN_STS1);
 	int ret;
 
 	bool daisychain_running = (reg & 0x30) != 0x30;
@@ -178,7 +179,7 @@ static int atl_hw_reset_nonrbl(struct atl_hw *hw)
 	atl_write(hw, 0x404, 0x180e0);
 
 	tries = busy_wait(10000, mdelay(1), reg, atl_read(hw, 0x704),
-		!(reg & 0x10));
+			  !(reg & 0x10));
 	if (!(reg & 0x10)) {
 		atl_dev_err("FLB kickstart timed out: %#x\n", reg);
 		ret = -EIO;
@@ -210,7 +211,6 @@ unlock:
 
 	return ret;
 }
-
 
 #define ATL2_FW_READ_DONE         BIT(0x10)
 #define ATL2_FW_READ_REQ          BIT(0x11)
@@ -264,7 +264,6 @@ static int atl2_hw_reset(struct atl_hw *hw)
 	if (!(rbl_status & ATL2_BOOT_STARTED))
 		atl_dev_dbg("Boot code probably hung, reboot anyway");
 
-
 	atl_write(hw, ATL2_MCP_HOST_REQ_INT_CLR, 0x01);
 	rbl_request = ATL2_FW_BOOT_REQ_REBOOT;
 	if (hw->mcp.ops) {
@@ -310,13 +309,13 @@ next_turn:
 	}
 
 	if (atl_read(hw, ATL2_MCP_HOST_REQ_INT) & 0x1) {
-		uint32_t req_adr = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_ADR);
-		uint32_t req_len = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_LEN);
+		u32 req_adr = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_ADR);
+		u32 req_len = atl_read(hw, ATL2_MIF_BOOT_READ_REQ_LEN);
 
 		atl_write(hw, ATL2_MCP_HOST_REQ_INT_CLR, 0x01);
 
-		if (((req_adr & BIT(31)) != 0) ||
-		    (req_len >= ATL2_FW_HOSTLOAD_REQ_LEN_MAX)) {
+		if ((req_adr & BIT(31)) != 0 ||
+		    req_len >= ATL2_FW_HOSTLOAD_REQ_LEN_MAX) {
 			err = -EIO;
 			atl_dev_err("FW read request invalid");
 			goto unlock;
@@ -347,8 +346,8 @@ unlock:
 
 static int atl1_hw_reset(struct atl_hw *hw)
 {
-	uint32_t reg;
-	uint32_t flb_stat;
+	u32 reg;
+	u32 flb_stat;
 	int tries = 0;
 	/* bool host_load_done = false; */
 	int ret;
@@ -408,19 +407,6 @@ static int atl1_hw_reset(struct atl_hw *hw)
 	}
 	atl_dev_dbg("RBL restart took %d ms result %#x\n", tries, reg);
 
-	/* if (host_load_done) { */
-	/* 	// Wait for MAC FW to decide whether it wants to reload the PHY FW */
-	/* 	busy_wait(10, mdelay(1), reg, atl_read(hw, 0x340), !(reg & (1 << 9 | 1 << 1 | 1 << 0))); */
-
-	/* 	if (reg & 1 << 9) { */
-	/* 		ret = atl_load_phy_fw(hw); */
-	/* 		if (ret) { */
-	/* 			atl_dev_err("PHY FW host load failed\n"); */
-	/* 			return ret; */
-	/* 		} */
-	/* 	} */
-	/* } */
-
 	ret = atl_fw_init(hw);
 
 unlock:
@@ -453,7 +439,7 @@ int atl_hw_reset(struct atl_hw *hw)
 	return ret;
 }
 
-static int atl_get_mac_addr(struct atl_hw *hw, uint8_t *buf)
+static int atl_get_mac_addr(struct atl_hw *hw, u8 *buf)
 {
 	int ret;
 
@@ -481,7 +467,7 @@ int atl_hwinit(struct atl_hw *hw, enum atl_chip chip_id)
 	ret = atl_hw_reset(hw);
 
 	atl_dev_info("rev 0x%x chip 0x%x FW img 0x%x\n",
-		 atl_read(hw, ATL_GLOBAL_CHIP_REV) & 0xffff,
+		     atl_read(hw, ATL_GLOBAL_CHIP_REV) & 0xffff,
 		 atl_read(hw, ATL_GLOBAL_CHIP_ID) & 0xffff,
 		 hw->mcp.fw_rev);
 
@@ -562,8 +548,8 @@ static irqreturn_t atl_legacy_irq(int irq, void *priv)
 {
 	struct atl_nic *nic = priv;
 	struct atl_hw *hw = &nic->hw;
-	uint32_t mask = hw->non_ring_intr_mask;
-	uint32_t stat;
+	u32 mask = hw->non_ring_intr_mask;
+	u32 stat;
 	int cpu;
 	int i;
 
@@ -578,7 +564,8 @@ static irqreturn_t atl_legacy_irq(int irq, void *priv)
 	if (!(stat & mask))
 		/* Interrupt from another device on a shared int
 		 * line. As no status bits were set, nothing was
-		 * masked above, so no need to unmask anything. */
+		 * masked above, so no need to unmask anything.
+		 */
 		return IRQ_NONE;
 
 	for (i = 0; i != nic->nvecs; i++) {
@@ -613,12 +600,12 @@ int atl_alloc_link_intr(struct atl_nic *nic)
 				  IRQF_NO_SUSPEND, nic->ndev->name, nic);
 		if (ret)
 			atl_nic_err("request MSI link vector failed: %d\n",
-				-ret);
+				    -ret);
 		return ret;
 	}
 
 	ret = request_irq(pci_irq_vector(pdev, 0), atl_legacy_irq, IRQF_SHARED,
-		nic->ndev->name, nic);
+			  nic->ndev->name, nic);
 	if (ret)
 		atl_nic_err("request legacy irq failed: %d\n", -ret);
 
@@ -633,12 +620,12 @@ void atl_free_link_intr(struct atl_nic *nic)
 	free_irq(pci_irq_vector(hw->pdev, 0), nic);
 }
 
-void atl_set_uc_flt(struct atl_hw *hw, int idx, uint8_t mac_addr[ETH_ALEN])
+void atl_set_uc_flt(struct atl_hw *hw, int idx, u8 mac_addr[ETH_ALEN])
 {
 	atl_write(hw, ATL_RX_UC_FLT_REG1(idx),
-		be32_to_cpu(*(uint32_t *)&mac_addr[2]));
+		  be32_to_cpu(*(u32 *)&mac_addr[2]));
 	atl_write(hw, ATL_RX_UC_FLT_REG2(idx),
-		(uint32_t)be16_to_cpu(*(uint16_t *)mac_addr) |
+		  (u32)be16_to_cpu(*(u16 *)mac_addr) |
 		1 << 16 | 1 << 31);
 	atl_write_bits(hw, ATL_RX_UC_FLT_REG2(idx), 22, 6, ATL2_RPF_TAG_BASE_UC);
 }
@@ -651,18 +638,18 @@ static void atl_disable_uc_flt(struct atl_hw *hw, int idx)
 void atl_set_rss_key(struct atl_hw *hw)
 {
 	int i;
-	uint32_t val;
+	u32 val;
 
 	for (i = 0; i < ATL_RSS_KEY_SIZE / 4; i++) {
-		val = swab32(((uint32_t *)hw->rss_key)[i]);
+		val = swab32(((u32 *)hw->rss_key)[i]);
 		atl_write(hw, ATL_RX_RSS_KEY_WR_DATA, val);
 		atl_write(hw, ATL_RX_RSS_KEY_ADDR, i | BIT(5));
 		busy_wait(100, udelay(1), val,
-			atl_read(hw, ATL_RX_RSS_KEY_ADDR),
+			  atl_read(hw, ATL_RX_RSS_KEY_ADDR),
 			val & BIT(5));
 		if (val & BIT(5)) {
 			atl_dev_err("Timeout writing RSS key[%d]: %#x\n",
-				i, val);
+				    i, val);
 			return;
 		}
 	}
@@ -671,8 +658,8 @@ void atl_set_rss_key(struct atl_hw *hw)
 int atl_set_rss_tbl(struct atl_hw *hw)
 {
 	int i, shift = 0, addr = 0;
-	uint32_t val = 0, stat;
-	uint32_t tc = 0;
+	u32 val = 0, stat;
+	u32 tc = 0;
 
 	if (hw->new_rpf)
 		for (i = ATL_RSS_TBL_SIZE; i--;) {
@@ -681,7 +668,7 @@ int atl_set_rss_tbl(struct atl_hw *hw)
 		}
 
 	for (i = 0; i < ATL_RSS_TBL_SIZE; i++) {
-		val |= (uint32_t)(hw->rss_tbl[i]) << shift;
+		val |= (u32)(hw->rss_tbl[i]) << shift;
 		shift += 3;
 
 		if (shift < 16)
@@ -691,7 +678,7 @@ int atl_set_rss_tbl(struct atl_hw *hw)
 		atl_write(hw, ATL_RX_RSS_TBL_ADDR, addr | BIT(4));
 
 		busy_wait(100, udelay(1), stat,
-			atl_read(hw, ATL_RX_RSS_TBL_ADDR), stat & BIT(4));
+			  atl_read(hw, ATL_RX_RSS_TBL_ADDR), stat & BIT(4));
 		if (stat & BIT(4)) {
 			atl_dev_err("Timeout writing RSS redir table[%d] (addr %d): %#x\n",
 				    i, addr, stat);
@@ -726,7 +713,8 @@ module_param_named(fwd_tx_buf_reserve, atl_fwd_tx_buf_reserve, uint, 0444);
 module_param_named(fwd_rx_buf_reserve, atl_fwd_rx_buf_reserve, uint, 0444);
 
 /* Must be called either during early init when netdev isn't yet
- * registered, or with RTNL lock held */
+ * registered, or with RTNL lock held
+ */
 void atl_start_hw_global(struct atl_nic *nic)
 {
 	struct atl_hw *hw = &nic->hw;
@@ -735,7 +723,7 @@ void atl_start_hw_global(struct atl_nic *nic)
 	if (!test_and_clear_bit(ATL_ST_GLOBAL_CONF_NEEDED, &hw->state))
 		return;
 
-	if (nic->priv_flags & ATL_PF_BIT(LPB_NET_DMA))
+	if (nic->priv_flags & ATL_PF_LPB_NET_DMA_BIT)
 		atl_enable_dma_net_lpb_mode(nic);
 
 	/* Enable TPO2 */
@@ -755,16 +743,16 @@ void atl_start_hw_global(struct atl_nic *nic)
 	tpb_size -= atl_fwd_tx_buf_reserve;
 	atl_write(hw, ATL_TX_PBUF_REG1(1), atl_fwd_tx_buf_reserve);
 	atl_write(hw, ATL_TX_PBUF_REG2(1),
-		(atl_fwd_tx_buf_reserve * 32 * 66 / 100) << 16 |
+		  (atl_fwd_tx_buf_reserve * 32 * 66 / 100) << 16 |
 		(atl_fwd_tx_buf_reserve * 32 * 50 / 100));
 	/* TC0: 160k minus TC1 size */
 	atl_write(hw, ATL_TX_PBUF_REG1(0), tpb_size);
 	atl_write(hw, ATL_TX_PBUF_REG2(0),
-		(tpb_size * 32 * 66 / 100) << 16 |
+		  (tpb_size * 32 * 66 / 100) << 16 |
 		(tpb_size * 32 * 50 / 100));
 	/* 4-TC | Enable TPB */
 	atl_set_bits(hw, ATL_TX_PBUF_CTRL1, BIT(8) | BIT(2) | BIT(0));
-	/* TX Buffer clk gate  off */
+	/* TX Buffer clk gate off */
 	if (hw->chip_id == ATL_ANTIGUA)
 		atl_clear_bits(hw, ATL_TX_PBUF_CTRL1, BIT(5));
 
@@ -838,7 +826,6 @@ void atl_start_hw_global(struct atl_nic *nic)
 		atl_write(hw, ATL2_TX_Q_TO_TC_MAP(5), 0x02020202);
 		atl_write(hw, ATL2_TX_Q_TO_TC_MAP(6), 0x03030303);
 		atl_write(hw, ATL2_TX_Q_TO_TC_MAP(7), 0x03030303);
-
 	}
 	/* Turn new filters on*/
 	if (hw->new_rpf) {
@@ -856,10 +843,11 @@ void atl_start_hw_global(struct atl_nic *nic)
 	/* Global interrupt block init */
 	if (nic->flags & ATL_FL_MULTIPLE_VECTORS) {
 		/* MSI or MSI-X mode interrupt mode */
-		uint32_t ctrl = hw->pdev->msix_enabled ? 2 : 1;
+		u32 ctrl = hw->pdev->msix_enabled ? 2 : 1;
 
 		/* Enable multi-vector mode and mask autoclear
-		 * register */
+		 * register
+		 */
 		ctrl |= BIT(2) | BIT(5);
 
 		atl_write(hw, ATL_INTR_CTRL, ctrl);
@@ -896,7 +884,7 @@ void atl_start_hw_global(struct atl_nic *nic)
 	atl_write(hw, 0x448, 3);
 }
 
-#define atl_vlan_flt_val(vid) ((uint32_t)(vid) | 1 << 16 | 1 << 31)
+#define atl_vlan_flt_val(vid) ((u32)(vid) | 1 << 16 | 1 << 31)
 
 void atl_set_rx_mode(struct net_device *ndev)
 {
@@ -921,7 +909,7 @@ void atl_set_rx_mode(struct net_device *ndev)
 	else if (uc_count + mc_count > nic->rxf_mac.available - 1)
 		all_multi_needed = true;
 
-	if (nic->priv_flags & ATL_PF_BIT(LPB_NET_DMA))
+	if (nic->priv_flags & ATL_PF_LPB_NET_DMA_BIT)
 		promisc_needed = true;
 
 	/* Enable promisc VLAN mode if IFF_PROMISC explicitly
@@ -933,7 +921,7 @@ void atl_set_rx_mode(struct net_device *ndev)
 			is_multicast_enabled && all_multi_needed);
 	if (hw->new_rpf)
 		atl2_fw_set_filter_policy(hw, promisc_needed,
-				  is_multicast_enabled && all_multi_needed);
+					  is_multicast_enabled && all_multi_needed);
 
 	if (promisc_needed)
 		return;
@@ -971,16 +959,16 @@ void atl_free_descs(struct atl_nic *nic, struct atl_hw_ring *ring, size_t extra)
 		return;
 
 	dma_free_coherent(dev, ring->size * sizeof(*ring->descs) + extra,
-		ring->descs, ring->daddr);
+			  ring->descs, ring->daddr);
 	ring->descs = 0;
 }
 
 void atl_set_intr_bits(struct atl_hw *hw, int idx, int rxbit, int txbit)
 {
 	int shift = idx & 1 ? 0 : 8;
-	uint32_t clear_mask = 0;
-	uint32_t set_mask = 0;
-	uint32_t val;
+	u32 clear_mask = 0;
+	u32 set_mask = 0;
+	u32 val;
 
 	if (rxbit >= 0) {
 		clear_mask |= BIT(7) | (BIT(5) - 1);
@@ -1028,7 +1016,7 @@ void atl_set_loopback(struct atl_nic *nic, int idx, bool on)
 
 int atl_hwsem_get(struct atl_hw *hw, int idx)
 {
-	uint32_t val;
+	u32 val;
 
 	busy_wait(10000, udelay(1), val, atl_read(hw, ATL_MCP_SEM(idx)), !val);
 
@@ -1045,10 +1033,10 @@ void atl_hwsem_put(struct atl_hw *hw, int idx)
 
 static int atl_msm_wait(struct atl_hw *hw)
 {
-	uint32_t val;
+	u32 val;
 
-	busy_wait(10, udelay(10), val, atl_read(hw, ATL_MPI_MSM_ADDR),
-		val & BIT(12));
+	busy_wait(10, usleep_range(10, 20), val, atl_read(hw, ATL_MPI_MSM_ADDR),
+		  val & BIT(12));
 	if (val & BIT(12)) {
 		/* If MSM CLKL off, return ENODATA */
 		if ((atl_read(hw, ATL_MPI_MSM_CTRL) & BIT(0xB)) == 0)
@@ -1060,7 +1048,7 @@ static int atl_msm_wait(struct atl_hw *hw)
 	return 0;
 }
 
-int __atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val)
+int __atl_msm_read(struct atl_hw *hw, u32 addr, u32 *val)
 {
 	int ret;
 
@@ -1077,7 +1065,7 @@ int __atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val)
 	return 0;
 }
 
-int atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val)
+int atl_msm_read(struct atl_hw *hw, u32 addr, u32 *val)
 {
 	int ret;
 
@@ -1095,7 +1083,7 @@ int atl_msm_read(struct atl_hw *hw, uint32_t addr, uint32_t *val)
 	return ret;
 }
 
-int __atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
+int __atl_msm_write(struct atl_hw *hw, u32 addr, u32 val)
 {
 	int ret;
 
@@ -1112,7 +1100,7 @@ int __atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
 	return 0;
 }
 
-int atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
+int atl_msm_write(struct atl_hw *hw, u32 addr, u32 val)
 {
 	int ret;
 
@@ -1128,10 +1116,10 @@ int atl_msm_write(struct atl_hw *hw, uint32_t addr, uint32_t val)
 
 static int atl_mdio_wait(struct atl_hw *hw)
 {
-	uint32_t val;
+	u32 val;
 
 	busy_wait(20, udelay(1), val, atl_read(hw, ATL_GLOBAL_MDIO_CMD),
-		val & BIT(31));
+		  val & BIT(31));
 	if (val & BIT(31))
 		return -ETIME;
 
@@ -1147,7 +1135,8 @@ int atl_mdio_hwsem_get(struct atl_hw *hw)
 		return ret;
 
 	/* Enable MDIO Clock (active low) in case MBU have disabled
-	 * it. */
+	 * it.
+	 */
 	atl_write_bit(hw, ATL_GLOBAL_MDIO_CTL, 14, 0);
 	return 0;
 }
@@ -1155,12 +1144,13 @@ int atl_mdio_hwsem_get(struct atl_hw *hw)
 void atl_mdio_hwsem_put(struct atl_hw *hw)
 {
 	/* It's ok to leave MDIO Clock running according to FW
-	 * guys. In fact that's what FW does. */
+	 * guys. In fact that's what FW does.
+	 */
 	atl_hwsem_put(hw, ATL_MCP_SEM_MDIO);
 }
 
-static void atl_mdio_set_addr(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr)
+static void atl_mdio_set_addr(struct atl_hw *hw, u8 prtad, u8 mmd,
+			      u16 addr)
 {
 	/* Set address */
 	atl_write(hw, ATL_GLOBAL_MDIO_ADDR, addr & (BIT(16) - 1));
@@ -1169,8 +1159,8 @@ static void atl_mdio_set_addr(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
 		prtad << 5 | mmd);
 }
 
-int __atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t *val)
+int __atl_mdio_read(struct atl_hw *hw, u8 prtad, u8 mmd,
+		    u16 addr, u16 *val)
 {
 	int ret;
 
@@ -1195,8 +1185,8 @@ int __atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
 	return 0;
 }
 
-int atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t *val)
+int atl_mdio_read(struct atl_hw *hw, u8 prtad, u8 mmd,
+		  u16 addr, u16 *val)
 {
 	int ret;
 
@@ -1210,8 +1200,8 @@ int atl_mdio_read(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
 	return ret;
 }
 
-int __atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t val)
+int __atl_mdio_write(struct atl_hw *hw, u8 prtad, u8 mmd,
+		     u16 addr, u16 val)
 {
 	int ret;
 
@@ -1235,8 +1225,8 @@ int __atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
 	return 0;
 }
 
-int atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
-	uint16_t addr, uint16_t val)
+int atl_mdio_write(struct atl_hw *hw, u8 prtad, u8 mmd,
+		   u16 addr, u16 val)
 {
 	int ret;
 
@@ -1250,20 +1240,22 @@ int atl_mdio_write(struct atl_hw *hw, uint8_t prtad, uint8_t mmd,
 	return 0;
 }
 
-#define __READ_MSM_OR_GOTO(RET, HW, REGISTER, PVARIABLE, label) \
-	RET = __atl_msm_read(HW, REGISTER, PVARIABLE); \
-	if (RET)							\
-		goto label;
+static inline int __read_msm_or_goto(int *ret, struct atl_hw *hw,
+				     u32 reg_addr, u32 *pvariable)
+{
+	*ret = __atl_msm_read(hw, reg_addr, pvariable);
+	return *ret;
+}
 
 void atl_adjust_eth_stats(struct atl_ether_stats *stats,
-	struct atl_ether_stats *base, bool add)
+			  struct atl_ether_stats *base, bool add)
 {
 	int i;
-	uint64_t *_stats = (uint64_t *)stats;
-	uint64_t *_base = (uint64_t *)base;
+	u64 *_stats = (u64 *)stats;
+	u64 *_base = (u64 *)base;
 
-	for (i = 0; i < sizeof(*stats) / sizeof(uint64_t); i++)
-		_stats[i] += add ? _base[i] : - _base[i];
+	for (i = 0; i < sizeof(*stats) / sizeof(u64); i++)
+		_stats[i] += add ? _base[i] : -_base[i];
 }
 
 static int __atl_fetch_msm1_stats(struct atl_hw *hw,
@@ -1276,35 +1268,48 @@ static int __atl_fetch_msm1_stats(struct atl_hw *hw,
 	if (ret)
 		return ret;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_TX_PAUSE, &reg, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_TX_PAUSE, &reg))
+		goto hwsem_put;
 	stats->tx_pause = reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_TX_PKTS_GOOD, &reg, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_TX_PKTS_GOOD, &reg))
+		goto hwsem_put;
 	stats->tx_ether_pkts = reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_TX_OCTETS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_TX_OCTETS_HI, &reg2, hwsem_put);
-	stats->tx_ether_octets = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_TX_OCTETS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_TX_OCTETS_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_ether_octets = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_PAUSE, &reg, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_PAUSE, &reg))
+		goto hwsem_put;
 	stats->rx_pause = reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_OCTETS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_OCTETS_HI, &reg2, hwsem_put);
-	stats->rx_ether_octets = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_OCTETS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_OCTETS_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_octets = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_PKTS_GOOD, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_ERRS, &reg2, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_PKTS_GOOD, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_ERRS, &reg2))
+		goto hwsem_put;
 	stats->rx_ether_pkts = reg + reg2;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_BROADCAST, &reg, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_BROADCAST, &reg))
+		goto hwsem_put;
 	stats->rx_ether_broacasts = reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_MULTICAST, &reg, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_MULTICAST, &reg))
+		goto hwsem_put;
 	stats->rx_ether_multicasts = reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_FCS_ERRS, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM_CTR_RX_ALIGN_ERRS, &reg2, hwsem_put);
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_FCS_ERRS, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM_CTR_RX_ALIGN_ERRS, &reg2))
+		goto hwsem_put;
 	stats->rx_ether_crc_align_errs = reg + reg2;
 
 hwsem_put:
@@ -1322,60 +1327,88 @@ static int __atl_fetch_msm2_stats(struct atl_hw *hw,
 	if (ret)
 		return ret;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_PAUSE_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_PAUSE_HI, &reg2, hwsem_put);
-	stats->tx_pause =  ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_PAUSE_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_PAUSE_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_pause =  ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_PKTS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_PKTS_HI, &reg2, hwsem_put);
-	stats->tx_ether_pkts = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_PKTS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_PKTS_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_ether_pkts = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_OCTETS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_OCTETS_HI, &reg2, hwsem_put);
-	stats->tx_ether_octets = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_OCTETS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_OCTETS_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_ether_octets = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_HI, &reg2, hwsem_put);
-	stats->tx_errors = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_FCS_ERRS_CNTR_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_errors = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_HI, &reg2, hwsem_put);
-	stats->tx_errors += ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_TX_FIFO_ERRS_CNTR_HI, &reg2))
+		goto hwsem_put;
+	stats->tx_errors += ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PAUSE_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PAUSE_HI, &reg2, hwsem_put);
-	stats->rx_pause =  ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_PAUSE_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_PAUSE_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_pause =  ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_OCTETS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_OCTETS_HI, &reg2, hwsem_put);
-	stats->rx_ether_octets = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_OCTETS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_OCTETS_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_octets = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PKTS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_PKTS_HI, &reg2, hwsem_put);
-	stats->rx_ether_pkts =  ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_PKTS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_PKTS_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_pkts =  ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_BROADCAST_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_BROADCAST_HI, &reg2, hwsem_put);
-	stats->rx_ether_broacasts =  ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_BROADCAST_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_BROADCAST_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_broacasts =  ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_MULTICAST_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_MULTICAST_HI, &reg2, hwsem_put);
-	stats->rx_ether_multicasts =  ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_MULTICAST_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_MULTICAST_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_multicasts =  ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_FCS_ERRS_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_FCS_ERRS_LO, &reg, hwsem_put);
-	stats->rx_ether_crc_align_errs = ((uint64_t)reg2 << 32) | reg;
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ALIGN_ERRS_LO, &reg2, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ALIGN_ERRS_HI, &reg2, hwsem_put);
-	stats->rx_ether_crc_align_errs += ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_FCS_ERRS_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_FCS_ERRS_LO, &reg))
+		goto hwsem_put;
+	stats->rx_ether_crc_align_errs = ((u64)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_ALIGN_ERRS_LO, &reg2))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_ALIGN_ERRS_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_ether_crc_align_errs += ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_HI, &reg2, hwsem_put);
-	stats->rx_errors = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_ERRS_CNTR_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_errors = ((u64)reg2 << 32) | reg;
 
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_LO, &reg, hwsem_put);
-	__READ_MSM_OR_GOTO(ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_HI, &reg2, hwsem_put);
-	stats->rx_drops = ((uint64_t)reg2 << 32) | reg;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_LO, &reg))
+		goto hwsem_put;
+	if (__read_msm_or_goto(&ret, hw, ATL_MSM2_CTR_RX_DROP_CNTR_HI, &reg2))
+		goto hwsem_put;
+	stats->rx_drops = ((u64)reg2 << 32) | reg;
 hwsem_put:
 	atl_hwsem_put(hw, ATL_MCP_SEM_MSM);
 	return ret;
@@ -1385,7 +1418,7 @@ int atl_update_eth_stats(struct atl_nic *nic)
 {
 	struct atl_hw *hw = &nic->hw;
 	struct atl_ether_stats stats;
-	uint32_t reg = 0, reg2 = 0;
+	u32 reg = 0, reg2 = 0;
 	int ret;
 
 	if (!test_bit(ATL_ST_ENABLED, &nic->hw.state) ||
@@ -1406,27 +1439,27 @@ int atl_update_eth_stats(struct atl_nic *nic)
 	stats.rx_dma_drops = atl_read(hw, ATL_RX_DMA_STATS_CNT7);
 
 	stats.rx_dma_packets = atl_read(hw, ATL_RX_DMA_STATS_CNT1);
-	stats.rx_dma_packets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
+	stats.rx_dma_packets += (u64)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
 
 	stats.rx_dma_octets = atl_read(hw, ATL_RX_DMA_STATS_CNT3);
-	stats.rx_dma_octets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT4) << 32;
+	stats.rx_dma_octets += (u64)atl_read(hw, ATL_RX_DMA_STATS_CNT4) << 32;
 
 	stats.tx_dma_packets = atl_read(hw, ATL_TX_DMA_STATS_CNT1);
-	stats.tx_dma_packets += (uint64_t)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
+	stats.tx_dma_packets += (u64)atl_read(hw, ATL_RX_DMA_STATS_CNT2) << 32;
 
 	stats.tx_dma_octets = atl_read(hw, ATL_TX_DMA_STATS_CNT3);
-	stats.tx_dma_octets += (uint64_t)atl_read(hw, ATL_TX_DMA_STATS_CNT4) << 32;
+	stats.tx_dma_octets += (u64)atl_read(hw, ATL_TX_DMA_STATS_CNT4) << 32;
 
 	/* capture debug counters*/
 	atl_write_bit(hw, ATL_RX_RPF_DBG_CNT_CTRL, 0x1f, 1);
 
 	reg = atl_read(hw, ATL_RX_RPF_HOST_CNT_LO);
 	reg2 = atl_read(hw, ATL_RX_RPF_HOST_CNT_HI);
-	stats.rx_filter_host = ((uint64_t)reg2 << 32) | reg;
+	stats.rx_filter_host = ((u64)reg2 << 32) | reg;
 
 	reg = atl_read(hw, ATL_RX_RPF_LOST_CNT_LO);
 	reg2 = atl_read(hw, ATL_RX_RPF_LOST_CNT_HI);
-	stats.rx_filter_lost = ((uint64_t)reg2 << 32) | reg;
+	stats.rx_filter_lost = ((u64)reg2 << 32) | reg;
 
 	spin_lock(&nic->stats_lock);
 
@@ -1441,12 +1474,11 @@ unlock_fw:
 	atl_unlock_fw(hw);
 	return ret;
 }
-#undef __READ_MSM_OR_GOTO
 
-int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay)
+int atl_get_lpi_timer(struct atl_nic *nic, u32 *lpi_delay)
 {
 	struct atl_hw *hw = &nic->hw;
-	uint32_t lpi;
+	u32 lpi;
 	int ret = 0;
 
 	if (hw->chip_id == ATL_ANTIGUA) {
@@ -1462,27 +1494,27 @@ int atl_get_lpi_timer(struct atl_nic *nic, uint32_t *lpi_delay)
 	return ret;
 }
 
-static uint32_t atl_mcp_mbox_wait(struct atl_hw *hw, enum mcp_area area, int loops)
+static u32 atl_mcp_mbox_wait(struct atl_hw *hw, enum mcp_area area, int loops)
 {
-	uint32_t stat;
+	u32 stat;
 
 	busy_wait(loops, cpu_relax(), stat,
-		(atl_read(hw, ATL_MCP_SCRATCH(FW2_MBOX_CMD)) & (0xf << 28)),
+		  (atl_read(hw, ATL_MCP_SCRATCH(FW2_MBOX_CMD)) & (0xf << 28)),
 		stat == area);
 
 	return stat;
 }
 
-int atl_write_mcp_mem_b1(struct atl_hw *hw, uint32_t offt, void *host_addr,
-	size_t size, enum mcp_area area)
+int atl_write_mcp_mem_b1(struct atl_hw *hw, u32 offt, void *host_addr,
+			 size_t size, enum mcp_area area)
 {
-	uint32_t *addr = (uint32_t *)host_addr;
+	u32 *addr = (u32 *)host_addr;
 
 	if (offt > 0xffff)
 		return -EINVAL;
 
 	while (size) {
-		uint32_t stat;
+		u32 stat;
 
 		atl_write(hw, ATL_MCP_SCRATCH(FW2_MBOX_DATA), *addr++);
 		atl_write(hw, ATL_MCP_SCRATCH(FW2_MBOX_CMD), area | offt);
@@ -1498,11 +1530,11 @@ int atl_write_mcp_mem_b1(struct atl_hw *hw, uint32_t offt, void *host_addr,
 
 		if (stat == area) {
 			atl_dev_err("FW mbox timeout offt %x, remaining %zx\n",
-				offt, size);
+				    offt, size);
 			return -ETIME;
 		} else if (stat != BIT(0x1E)) {
 			atl_dev_err("FW mbox error status 0x%x, offt 0x%x, remaining %zx\n",
-				stat, offt, size);
+				    stat, offt, size);
 			return -EIO;
 		}
 
@@ -1513,10 +1545,10 @@ int atl_write_mcp_mem_b1(struct atl_hw *hw, uint32_t offt, void *host_addr,
 	return 0;
 }
 
-int atl_write_mcp_mem_b0(struct atl_hw *hw, uint32_t offt, void *host_addr,
-	size_t size, enum mcp_area area)
+int atl_write_mcp_mem_b0(struct atl_hw *hw, u32 offt, void *host_addr,
+			 size_t size, enum mcp_area area)
 {
-	uint32_t *addr = (uint32_t *)host_addr;
+	u32 *addr = (u32 *)host_addr;
 
 	if (offt > 0xffff)
 		return -EINVAL;
@@ -1529,13 +1561,13 @@ int atl_write_mcp_mem_b0(struct atl_hw *hw, uint32_t offt, void *host_addr,
 	atl_write(hw, ATL_GLOBAL_MBOX_ADDR, offt);
 
 	while (size) {
-		uint32_t stat;
+		u32 stat;
 
 		atl_write(hw, ATL_GLOBAL_MBOX_DATA, *addr++);
 		atl_write(hw, ATL_GLOBAL_MBOX_CTRL, 0xc000);
 
-		busy_wait(100, udelay(10), stat,
-			atl_read(hw, ATL_GLOBAL_MBOX_CTRL),
+		busy_wait(100, usleep_range(10, 20), stat,
+			  atl_read(hw, ATL_GLOBAL_MBOX_CTRL),
 			stat & BIT(8));
 		if (stat & BIT(8))
 			return -ETIME;
@@ -1546,8 +1578,8 @@ int atl_write_mcp_mem_b0(struct atl_hw *hw, uint32_t offt, void *host_addr,
 	return 0;
 }
 
-int atl_write_mcp_mem(struct atl_hw *hw, uint32_t offt, void *host_addr,
-	size_t size, enum mcp_area area)
+int atl_write_mcp_mem(struct atl_hw *hw, u32 offt, void *host_addr,
+		      size_t size, enum mcp_area area)
 {
 	int ret;
 
@@ -1577,15 +1609,16 @@ void atl_thermal_check(struct atl_hw *hw, bool alarm)
 		if (lowest < lstate->lp_lowest) {
 			lstate->lp_lowest = lowest;
 			if (lowest < lstate->throttled_to &&
-				lstate->thermal_throttled && alarm)
+			    lstate->thermal_throttled && alarm)
 				/* We're still thermal-throttled, and
 				 * just found out we can lower the
 				 * speed even more, so renegotiate.
 				 */
 				goto relink;
 		}
-	} else
+	} else {
 		lstate->lp_lowest = fls(lstate->supported) - 1;
+	}
 
 	if (alarm == lstate->thermal_throttled)
 		return;
@@ -1602,13 +1635,13 @@ void atl_thermal_check(struct atl_hw *hw, bool alarm)
 	if (alarm) {
 		if (temp)
 			atl_dev_warn("PHY temperature above threshold: %d.%d\n",
-				temp / 10, temp % 10);
+				     temp / 10, temp % 10);
 		else
 			atl_dev_warn("PHY temperature above threshold\n");
 	} else {
 		if (temp)
 			atl_dev_warn("PHY temperature back in range: %d.%d\n",
-				temp / 10, temp % 10);
+				     temp / 10, temp % 10);
 		else
 			atl_dev_warn("PHY temperature back in range\n");
 	}
@@ -1626,7 +1659,7 @@ relink:
 
 /* set action resolver record */
 static void atl2_rpf_act_rslvr_record_set(struct atl_hw *hw, u8 location,
-				   u32 tag, u32 mask, u32 action)
+					  u32 tag, u32 mask, u32 action)
 {
 	atl_write(hw, ATL2_RPF_ACT_RSLVR_REQ_TAG(location), tag);
 	atl_write(hw, ATL2_RPF_ACT_RSLVR_TAG_MASK(location), mask);
@@ -1668,7 +1701,7 @@ int atl2_act_rslvr_table_set(struct atl_hw *hw, u8 location,
 static void atl2_hw_init_new_rx_filters(struct atl_hw *hw)
 {
 	struct atl_nic *nic = container_of(hw, struct atl_nic, hw);
-	uint32_t art_last_sec, art_first_sec, art_mask;
+	u32 art_last_sec, art_first_sec, art_mask;
 	int index;
 
 	atl_write_bits(hw, ATL_RX_UC_FLT_REG2(nic->rxf_mac.base_index),
@@ -1729,5 +1762,4 @@ static void atl2_hw_new_rx_filter_promisc(struct atl_hw *hw, bool promisc,
 				 0,
 				 mask,
 				 off_action);
-
 }
