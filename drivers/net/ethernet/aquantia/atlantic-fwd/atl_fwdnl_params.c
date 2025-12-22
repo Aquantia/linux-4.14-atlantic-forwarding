@@ -22,14 +22,15 @@ unsigned int altfwd_nl_rx_poll_interval_msec = 200;
 int atlfwd_nl_rx_clean_budget = NAPI_POLL_WEIGHT;
 
 typedef void (*for_each_func_t)(struct net_device *ndev);
-static void for_each_atlfwd_device(for_each_func_t f)
+
+static void atlfwd_device_for_each(for_each_func_t f)
 {
 	struct net_device *ndev;
 	struct net *ns;
 
 	rcu_read_lock();
-	for_each_net_rcu (ns) {
-		for_each_netdev_rcu (ns, ndev) {
+	for_each_net_rcu(ns) {
+		for_each_netdev_rcu(ns, ndev) {
 			if (!is_atlfwd_device(ndev))
 				continue;
 
@@ -62,11 +63,9 @@ static void force_rx_polling(struct net_device *ndev)
 			continue;
 
 		desc = atlfwd_nl_get_fwd_ring_desc(ring);
-		if (likely(desc != NULL && desc->rx_poll_timer != NULL)) {
-			desc->rx_poll_timer->expires =
-				jiffies +
-				msecs_to_jiffies(
-					altfwd_nl_rx_poll_interval_msec);
+		if (likely(desc && desc->rx_poll_timer)) {
+			desc->rx_poll_timer->expires = jiffies +
+				msecs_to_jiffies(altfwd_nl_rx_poll_interval_msec);
 			add_timer(desc->rx_poll_timer);
 		}
 	}
@@ -83,7 +82,7 @@ static int tx_clean_threshold_msec_set(const char *val,
 
 	if (msec != 0 && atlfwd_nl_tx_clean_threshold_msec == 0) {
 		/* Force extra TX housekeeping, if threshold is re-enabled */
-		for_each_atlfwd_device(force_tx_housekeeping);
+		atlfwd_device_for_each(force_tx_housekeeping);
 	}
 
 	return param_set_uint(val, kp);
@@ -105,7 +104,7 @@ static int tx_clean_threshold_frac_set(const char *val,
 
 	if (frac != 0 && atlfwd_nl_tx_clean_threshold_frac == 0) {
 		/* Force extra TX housekeeping, if threshold is re-enabled */
-		for_each_atlfwd_device(force_tx_housekeeping);
+		atlfwd_device_for_each(force_tx_housekeeping);
 	}
 
 	return param_set_uint(val, kp);
@@ -127,7 +126,7 @@ static int rx_poll_interval_msec_set(const char *val,
 
 	if (msec != 0 && altfwd_nl_rx_poll_interval_msec == 0) {
 		/* Kick off RX polling, if polling is re-enabled */
-		for_each_atlfwd_device(force_rx_polling);
+		atlfwd_device_for_each(force_rx_polling);
 	}
 
 	return param_set_uint(val, kp);
