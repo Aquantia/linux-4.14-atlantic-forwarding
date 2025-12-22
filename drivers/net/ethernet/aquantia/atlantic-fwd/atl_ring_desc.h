@@ -25,11 +25,11 @@ struct atl_fwd_event;
 struct atl_desc_ring {
 	struct atl_hw_ring hw;
 	struct atl_nic *nic;
-	uint32_t head;
-	uint32_t tail;
+	u32 head;
+	u32 tail;
 	union {
 		/* Rx ring only */
-		uint32_t next_to_recycle;
+		u32 next_to_recycle;
 		/* Tx ring only, template desc for atl_map_tx_skb() */
 		union atl_desc desc;
 	};
