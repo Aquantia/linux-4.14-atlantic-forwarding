@@ -51,14 +51,14 @@ enum ptp_speed_offsets {
 
 struct ptp_skb_ring {
 	struct sk_buff **buff;
-	spinlock_t lock;
+	spinlock_t lock;		/* protects ring buffer */
 	unsigned int size;
 	unsigned int head;
 	unsigned int tail;
 };
 
 struct ptp_tx_timeout {
-	spinlock_t lock;
+	spinlock_t lock;		/* protects timeout state */
 	bool active;
 	unsigned long tx_start;
 };
@@ -72,8 +72,8 @@ enum atl_ptp_queue {
 struct atl_ptp {
 	struct atl_nic *nic;
 	struct hwtstamp_config hwtstamp_config;
-	spinlock_t ptp_lock;
-	spinlock_t ptp_ring_lock;
+	spinlock_t ptp_lock;		/* protects PTP operations */
+	spinlock_t ptp_ring_lock;	/* protects PTP ring access */
 	struct ptp_clock *ptp_clock;
 	struct ptp_clock_info ptp_info;
 
@@ -98,10 +98,6 @@ struct atl_ptp {
 	bool extts_pin_enabled;
 	u64 last_sync1588_ts;
 };
-
-#define atl_for_each_ptp_qvec(ptp, qvec)			\
-	for (qvec = &ptp->qvec[0];				\
-	     qvec < &ptp->qvec[ATL_PTPQ_NUM]; qvec++)
 
 struct ptp_tm_offset {
 	unsigned int mbps;
@@ -265,7 +261,6 @@ static void atl_ptp_tx_timeout_check(struct atl_ptp *ptp)
 	}
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
 /* atl_ptp_adjfine
  * @ptp_info: the ptp clock structure
  * @ppb: parts per billion adjustment from base
@@ -282,26 +277,6 @@ static int atl_ptp_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
 
 	return 0;
 }
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
-/* atl_ptp_adjfreq
- * @ptp_info: the ptp clock structure
- * @ppb: parts per billion adjustment from base
- *
- * adjust the frequency of the ptp cycle counter by the
- * indicated ppb from the base frequency.
- */
-static int atl_ptp_adjfreq(struct ptp_clock_info *ptp_info, s32 ppb)
-{
-	struct atl_ptp *ptp = container_of(ptp_info, struct atl_ptp, ptp_info);
-	struct atl_nic *nic = ptp->nic;
-
-	hw_atl_adj_clock_freq(&nic->hw, ppb);
-
-	return 0;
-}
-#endif
 
 /* atl_ptp_adjtime
  * @ptp_info: the ptp clock structure
@@ -355,7 +330,7 @@ static int atl_ptp_gettime(struct ptp_clock_info *ptp_info, struct timespec64 *t
  * wall timer value.
  */
 static int atl_ptp_settime(struct ptp_clock_info *ptp_info,
-			  const struct timespec64 *ts)
+			   const struct timespec64 *ts)
 {
 	struct atl_ptp *ptp = container_of(ptp_info, struct atl_ptp, ptp_info);
 	struct atl_nic *nic = ptp->nic;
@@ -471,9 +446,8 @@ static int atl_ptp_pps_reconfigure(struct atl_ptp *ptp)
 	int i;
 
 	for (i = 0; i < ptp->ptp_info.n_pins; i++)
-		if ((ptp->ptp_info.pin_config[i].func == PTP_PF_PEROUT) &&
-		    (ptp->ptp_info.pin_config[i].rsv[2] == ptp_perout_pps)) {
-
+		if (ptp->ptp_info.pin_config[i].func == PTP_PF_PEROUT &&
+		    ptp->ptp_info.pin_config[i].rsv[2] == ptp_perout_pps) {
 			hw_atl_get_ptp_ts(&nic->hw, &start);
 			div_u64_rem(start, NSEC_PER_SEC, &rest);
 			period = NSEC_PER_SEC;
@@ -483,7 +457,6 @@ static int atl_ptp_pps_reconfigure(struct atl_ptp *ptp)
 		}
 
 	return 0;
-
 }
 
 static void atl_ptp_extts_pin_ctrl(struct atl_ptp *ptp)
@@ -621,20 +594,10 @@ static struct ptp_clock_info atl_ptp_clock = {
 	.max_adj	= 999999999,
 	.n_ext_ts	= 0,
 	.pps		= 0,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 0)
 	.adjfine	= atl_ptp_adjfine,
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
-	.adjfreq	= atl_ptp_adjfreq,
-#endif
 	.adjtime	= atl_ptp_adjtime,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0)
 	.gettime64	= atl_ptp_gettime,
 	.settime64	= atl_ptp_settime,
-#else
-	.gettime	= atl_ptp_gettime,
-	.settime	= atl_ptp_settime,
-#endif
 	.n_per_out	= 0,
 	.enable		= atl_ptp_gpio_feature_enable,
 	.n_pins		= 0,
@@ -643,9 +606,13 @@ static struct ptp_clock_info atl_ptp_clock = {
 };
 
 #define ptp_offset_init(__idx, __mbps, __egress, __ingress)   do { \
-		ptp_offset[__idx].mbps = (__mbps); \
-		ptp_offset[__idx].egress = (__egress); \
-		ptp_offset[__idx].ingress = (__ingress); } \
+		typeof(__idx) _idx = (__idx); \
+		typeof(__mbps) _mbps = (__mbps); \
+		typeof(__egress) _egress = (__egress); \
+		typeof(__ingress) _ingress = (__ingress); \
+		ptp_offset[_idx].mbps = _mbps; \
+		ptp_offset[_idx].egress = _egress; \
+		ptp_offset[_idx].ingress = _ingress; } \
 		while (0)
 
 static void atl_ptp_offset_init_from_fw(const struct atl_ptp_offset_info *offsets)
@@ -749,7 +716,7 @@ static void atl_ptp_gpio_init(struct atl_nic *nic,
 }
 
 /* PTP external GPIO nanoseconds count */
-static uint64_t atl_ptp_get_sync1588_ts(struct atl_nic *nic)
+static u64 atl_ptp_get_sync1588_ts(struct atl_nic *nic)
 {
 	u64 ts = 0;
 
@@ -1119,7 +1086,8 @@ int atl_ptp_ring_alloc(struct atl_nic *nic)
 		atl_init_qvec(nic, qvec, atl_ptp_ring_index(i));
 	}
 
-	atl_for_each_ptp_qvec(ptp, qvec) {
+	for (qvec = &ptp->qvec[0];
+	     qvec < &ptp->qvec[ATL_PTPQ_NUM]; qvec++) {
 		err = atl_alloc_qvec(qvec);
 		if (err)
 			goto free;
@@ -1151,7 +1119,8 @@ int atl_ptp_ring_start(struct atl_nic *nic)
 	if (!ptp)
 		return 0;
 
-	atl_for_each_ptp_qvec(ptp, qvec) {
+	for (qvec = &ptp->qvec[0];
+	     qvec < &ptp->qvec[ATL_PTPQ_NUM]; qvec++) {
 		err = atl_start_qvec(qvec);
 		if (err)
 			goto stop;
@@ -1182,7 +1151,8 @@ void atl_ptp_ring_stop(struct atl_nic *nic)
 	napi_disable(ptp->napi);
 	netif_napi_del(ptp->napi);
 
-	atl_for_each_ptp_qvec(ptp, qvec)
+	for (qvec = &ptp->qvec[0];
+	     qvec < &ptp->qvec[ATL_PTPQ_NUM]; qvec++)
 		atl_stop_qvec(qvec);
 #endif
 }
@@ -1290,12 +1260,12 @@ int atl_ptp_register(struct atl_nic *nic)
 		return 0;
 
 	err = atl_read_mcp_mem(&nic->hw, mcp->fw_stat_addr + atl_fw2_stat_ptp_offset,
-		&ptp_offset_info, sizeof(ptp_offset_info));
+			       &ptp_offset_info, sizeof(ptp_offset_info));
 	if (err)
 		return err;
 
 	err = atl_read_mcp_mem(&nic->hw, mcp->fw_stat_addr + atl_fw2_stat_gpio_pin,
-		&gpio_pin, sizeof(gpio_pin));
+			       &gpio_pin, sizeof(gpio_pin));
 	if (err)
 		return err;
 
