@@ -13,78 +13,66 @@
 #define _ATL_STATS_H_
 
 #include <linux/types.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
-#include <linux/stddef.h>
-#endif
 
 struct atl_rx_ring_stats {
-	uint64_t packets;
-	uint64_t bytes;
-	uint64_t linear_dropped;
-	uint64_t alloc_skb_failed;
-	uint64_t reused_head_page;
-	uint64_t reused_data_page;
-	uint64_t alloc_head_page;
-	uint64_t alloc_data_page;
-	uint64_t alloc_head_page_failed;
-	uint64_t alloc_data_page_failed;
-	uint64_t non_eop_descs;
-	uint64_t mac_err;
-	uint64_t csum_err;
-	uint64_t multicast;
+	u64 packets;
+	u64 bytes;
+	u64 linear_dropped;
+	u64 alloc_skb_failed;
+	u64 reused_head_page;
+	u64 reused_data_page;
+	u64 alloc_head_page;
+	u64 alloc_data_page;
+	u64 alloc_head_page_failed;
+	u64 alloc_data_page_failed;
+	u64 non_eop_descs;
+	u64 mac_err;
+	u64 csum_err;
+	u64 multicast;
 };
 
 struct atl_rx_fwd_ring_stats {
-	uint64_t packets;
-	uint64_t bytes;
+	u64 packets;
+	u64 bytes;
 };
 
 struct atl_tx_ring_stats {
-	uint64_t packets;
-	uint64_t bytes;
-	uint64_t tx_busy;       /* number of times ring was full and tx failed */
-	uint64_t tx_restart;
-	uint64_t dma_map_failed;
+	u64 packets;
+	u64 bytes;
+	u64 tx_busy;       /* number of times ring was full and tx failed */
+	u64 tx_restart;
+	u64 dma_map_failed;
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 struct atl_ring_stats {
 	union {
 		struct_group(rxtx,
-			struct atl_rx_ring_stats rx;
-			struct atl_tx_ring_stats tx;
+				struct atl_rx_ring_stats rx;
+				struct atl_tx_ring_stats tx;
 		);
 	};
 };
-#else
-struct atl_ring_stats {
-	union {
-		struct atl_rx_ring_stats rx;
-		struct atl_tx_ring_stats tx;
-	};
-};
-#endif
 
 struct atl_ether_stats {
-	uint64_t tx_pause;
-	uint64_t tx_ether_pkts;
-	uint64_t tx_ether_octets;
-	uint64_t tx_errors; /* from MSM block */
-	uint64_t rx_pause;
-	uint64_t rx_ether_octets;
-	uint64_t rx_ether_pkts;
-	uint64_t rx_ether_broacasts;
-	uint64_t rx_ether_multicasts;
-	uint64_t rx_ether_crc_align_errs;
-	uint64_t rx_filter_host;
-	uint64_t rx_filter_lost;
-	uint64_t rx_errors; /* from MSM block */
-	uint64_t rx_drops;  /* from MSM block */
-	uint64_t rx_dma_packets;
-	uint64_t rx_dma_octets;
-	uint64_t rx_dma_drops;   /* DMA level RX drops */
-	uint64_t tx_dma_packets;
-	uint64_t tx_dma_octets;
+	u64 tx_pause;
+	u64 tx_ether_pkts;
+	u64 tx_ether_octets;
+	u64 tx_errors; /* from MSM block */
+	u64 rx_pause;
+	u64 rx_ether_octets;
+	u64 rx_ether_pkts;
+	u64 rx_ether_broacasts;
+	u64 rx_ether_multicasts;
+	u64 rx_ether_crc_align_errs;
+	u64 rx_filter_host;
+	u64 rx_filter_lost;
+	u64 rx_errors; /* from MSM block */
+	u64 rx_drops;  /* from MSM block */
+	u64 rx_dma_packets;
+	u64 rx_dma_octets;
+	u64 rx_dma_drops;   /* DMA level RX drops */
+	u64 tx_dma_packets;
+	u64 tx_dma_octets;
 };
 
 struct atl_global_stats {
